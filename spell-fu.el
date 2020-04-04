@@ -313,7 +313,7 @@ save some time by not spending time reading it back."
       ;; Load cache or create it, creating it returns the cache
       ;; to avoid some slow-down on first load.
       (setq spell-fu--cache-table
-        (if (and (file-exists-p cache-file) (spell-fu--file-is-older cache-file words-file))
+        (if (and (file-exists-p cache-file) (not (spell-fu--file-is-older cache-file words-file)))
           (spell-fu--cache-words-load cache-file)
           (spell-fu--cache-from-word-list words-file cache-file))))))
 

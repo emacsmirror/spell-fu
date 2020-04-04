@@ -238,8 +238,8 @@ Argument WORDS-FILE the file to write the word list into."
           (spell-fu--file-is-older words-file ispell-personal-dictionary))))
 
     (when (or (not has-words-file) is-dict-outdated)
-      (message "Generating %S" words-file)
 
+      (message "Generating words %S" words-file)
       (with-temp-buffer
         ;; Optional: insert personal dictionary, stripping header and inserting a newline.
         (when has-dict-personal
@@ -251,7 +251,9 @@ Argument WORDS-FILE the file to write the word list into."
           (unless (eq ?\n (char-after))
             (insert "\n")))
 
+        ;; TODO: make dictionary configurable.
         (call-process (executable-find "aspell") nil t nil "-d" "en_US" "dump" "master")
+
         ;; Case insensitive sort is important if this is used for `ispell-complete-word-dict'.
         ;; Which is a handy double-use for this file.
         (let ((sort-fold-case t))
@@ -268,6 +270,8 @@ Argument WORDS-FILE the file to write the word list into."
 The resulting cache is returned as a minor optimization for first-time loading,
 where we need to create this data in order to write it,
 save some time by not spending time reading it back."
+
+  (message "Generating cache %S" cache-file)
   (let ((word-table nil))
     (with-temp-buffer
       (insert-file-contents-literally words-file)

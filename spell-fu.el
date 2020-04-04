@@ -192,15 +192,17 @@ Argument AFTER, ignore when true."
 (defun spell-fu--faces-at-point (pos)
   "Add the named faces that the `read-face-name' or `face' property use.
 Argument POS return faces at this point."
-  (let ((faces nil))
-    (let ((faceprop (or (get-char-property pos 'read-face-name) (get-char-property pos 'face))))
-      (cond
-        ((facep faceprop)
-          (push faceprop faces))
-        ((face-list-p faceprop)
-          (dolist (face faceprop)
-            (if (facep face)
-              (push face faces))))))
+  (let
+    ( ;; List of faces to return.
+      (faces nil)
+      (faceprop (or (get-char-property pos 'read-face-name) (get-char-property pos 'face))))
+    (cond
+      ((facep faceprop)
+        (push faceprop faces))
+      ((face-list-p faceprop)
+        (dolist (face faceprop)
+          (if (facep face)
+            (push face faces)))))
     faces))
 
 (defun spell-fu--file-is-older-list (file-test file-list)

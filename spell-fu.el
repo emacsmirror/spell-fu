@@ -54,9 +54,7 @@
 
 (eval-when-compile
   ;; For `ispell-personal-dictionary' and similar.
-  (require 'ispell)
-  ;; Quiet warning about `sort-fold-case'.
-  (require 'sort))
+  (require 'ispell))
 
 
 ;; ---------------------------------------------------------------------------
@@ -143,6 +141,7 @@ Notes:
 ;; Helpers, not directly related to checking spelling.
 ;;
 
+
 (defmacro spell-fu--with-message-prefix (prefix &rest body)
   "Add text before the message output.
 Argument PREFIX is the text to add at the start of the message.
@@ -185,6 +184,16 @@ Optional argument BODY runs with the depth override."
       (setq ,point-end (line-end-position))
       (goto-char ,point-start)
       (setq ,point-start (line-beginning-position)))))
+
+(defun spell-fu--buffer-as-line-list (buffer lines)
+  "Add lines from BUFFER to LINES, returning the updated LINES."
+  (with-current-buffer buffer
+    (save-excursion
+      (goto-char (point-min))
+      (while (not (eobp))
+        (push (buffer-substring-no-properties (line-beginning-position) (line-end-position)) lines)
+        (forward-line 1))))
+  lines)
 
 (defun spell-fu--removed-changed-overlay (overlay after _beg _end &optional _len)
   "Hook for removing OVERLAY which is being edited.
@@ -247,37 +256,56 @@ Argument WORDS-FILE the file to write the word list into."
       (spell-fu--with-message-prefix "Spell-fu generating words: "
         (message "%S" (file-name-nondirectory words-file))
 
-        (with-temp-buffer
+        ;; Build a word list, sorted case insensitive.
+        (let ((word-list nil))
+
           ;; Optional: insert personal dictionary, stripping header and inserting a newline.
-          (when has-dict-personal
-            (insert-file-contents personal-words-file)
-            (goto-char (point-min))
-            (when (looking-at "personal_ws\-")
-              (delete-region (line-beginning-position) (1+ (line-end-position))))
-            (goto-char (point-max))
-            (unless (eq ?\n (char-after))
-              (insert "\n")))
+          (with-temp-buffer
+            (when has-dict-personal
+              (insert-file-contents personal-words-file)
+              (goto-char (point-min))
+              (when (looking-at "personal_ws\-")
+                (delete-region (line-beginning-position) (1+ (line-end-position))))
+              (goto-char (point-max))
+              (unless (eq ?\n (char-after))
+                (insert "\n")))
 
-          (let
-            ( ;; Use the pre-configured aspell binary, or call aspell directly.
-              (aspell-bin
-                (or
-                  (and
-                    (bound-and-true-p ispell-really-aspell)
-                    (bound-and-true-p ispell-program-name))
-                  (executable-find "aspell"))))
+            (setq word-list (spell-fu--buffer-as-line-list (current-buffer) word-list)))
 
-            (cond
-              ((string-equal dict "default")
-                (call-process aspell-bin nil t nil "dump" "master"))
-              (t
-                (call-process aspell-bin nil t nil "-d" dict "dump" "master"))))
+          ;; Insert dictionary from aspell.
+          (with-temp-buffer
+            (let
+              ( ;; Use the pre-configured aspell binary, or call aspell directly.
+                (aspell-bin
+                  (or
+                    (and
+                      (bound-and-true-p ispell-really-aspell)
+                      (bound-and-true-p ispell-program-name))
+                    (executable-find "aspell"))))
+
+              (cond
+                ((string-equal dict "default")
+                  (call-process aspell-bin nil t nil "dump" "master"))
+                (t
+                  (call-process aspell-bin nil t nil "-d" dict "dump" "master"))))
+
+            (setq word-list (spell-fu--buffer-as-line-list (current-buffer) word-list)))
 
           ;; Case insensitive sort is important if this is used for `ispell-complete-word-dict'.
           ;; Which is a handy double-use for this file.
-          (let ((sort-fold-case t))
-            (sort-lines nil (point-min) (point-max)))
-          (write-region nil nil words-file nil 0))))))
+          (let ((word-list-ncase nil))
+            (dolist (word word-list)
+              (push (cons (downcase word) word) word-list-ncase))
+
+            ;; Sort by the lowercase word.
+            (setq word-list-ncase
+              (sort word-list-ncase (lambda (a b) (string-lessp (car a) (car b)))))
+
+            ;; Write to 'words-file'.
+            (with-temp-buffer
+              (dolist (line-cons word-list-ncase)
+                (insert (cdr line-cons) "\n"))
+              (write-region nil nil words-file nil 0))))))))
 
 
 ;; ---------------------------------------------------------------------------

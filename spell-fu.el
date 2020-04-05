@@ -123,7 +123,7 @@ Notes:
 
 (defun spell-fu--dictionary ()
   "Access the current dictionary."
-  (or ispell-local-dictionary ispell-dictionary "default"))
+  (or (bound-and-true-p ispell-local-dictionary) (bound-and-true-p ispell-dictionary) "default"))
 
 (defun spell-fu--cache-file ()
   "Return the location of the cache file."
@@ -228,14 +228,14 @@ Argument POS return faces at this point."
 Argument WORDS-FILE the file to write the word list into."
   (let*
     (
+      (personal-words-file (bound-and-true-p ispell-personal-dictionary))
       (has-words-file (file-exists-p words-file))
-      (has-dict-personal
-        (and ispell-personal-dictionary (file-exists-p ispell-personal-dictionary)))
+      (has-dict-personal (and personal-words-file (file-exists-p personal-words-file)))
       (is-dict-outdated
         (and
           has-words-file
           has-dict-personal
-          (spell-fu--file-is-older words-file ispell-personal-dictionary))))
+          (spell-fu--file-is-older words-file personal-words-file))))
 
     (when (or (not has-words-file) is-dict-outdated)
 
@@ -245,7 +245,7 @@ Argument WORDS-FILE the file to write the word list into."
         (with-temp-buffer
           ;; Optional: insert personal dictionary, stripping header and inserting a newline.
           (when has-dict-personal
-            (insert-file-contents ispell-personal-dictionary)
+            (insert-file-contents personal-words-file)
             (goto-char (point-min))
             (when (looking-at "personal_ws\-")
               (delete-region (line-beginning-position) (1+ (line-end-position))))

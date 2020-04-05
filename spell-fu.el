@@ -158,7 +158,7 @@ Optional argument BODY runs with the message prefix."
 (defmacro spell-fu--with-add-hook-depth-override (depth-override &rest body)
   "Support overriding the depth of a hook added by an indirect call.
 Argument DEPTH-OVERRIDE the depth value to call `add-hook' with.
-Optional argument BODY runs with the message prefix."
+Optional argument BODY runs with the depth override."
   (declare (indent 1))
   (let ((add-hook-orig (make-symbol "--spell-fu--with-add-hook-depth-override--")))
     `

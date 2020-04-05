@@ -108,6 +108,13 @@ Other Settings
 
 Some settings are used which aren't part of this package:
 
+``ispell-program-name``
+   Used to call aspell (when this points to ``aspell``, otherwise ``aspell`` is called).
+
+``ispell-dictionary``
+   When generating the word-list, this variable is used when present,
+   otherwise aspell's default dictionary is used.
+
 ``ispell-personal-dictionary``
    When generating the word-list, this file is included when present.
 
@@ -134,5 +141,3 @@ TODO
 ====
 
 - Support alternates to ``aspell`` for generating word lists.
-- Currently generating the initial word-list is hard-coded to ``en_US``,
-  this should read the users dictionary type.

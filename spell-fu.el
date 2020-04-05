@@ -251,8 +251,21 @@ Argument WORDS-FILE the file to write the word list into."
           (unless (eq ?\n (char-after))
             (insert "\n")))
 
-        ;; TODO: make dictionary configurable.
-        (call-process (executable-find "aspell") nil t nil "-d" "en_US" "dump" "master")
+        (let
+          ( ;; Use the pre-configured aspell binary, or call aspell directly.
+            (aspell-bin
+              (or
+                (and
+                  (bound-and-true-p ispell-really-aspell)
+                  (bound-and-true-p ispell-program-name))
+                (executable-find "aspell")))
+            (dict (spell-fu--dictionary)))
+
+          (cond
+            ((string-equal dict "default")
+              (call-process aspell-bin nil t nil "dump" "master"))
+            (t
+              (call-process aspell-bin nil t nil "-d" dict "dump" "master"))))
 
         ;; Case insensitive sort is important if this is used for `ispell-complete-word-dict'.
         ;; Which is a handy double-use for this file.

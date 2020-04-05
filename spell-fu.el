@@ -129,11 +129,11 @@ Notes:
   (or (bound-and-true-p ispell-local-dictionary) (bound-and-true-p ispell-dictionary) "default"))
 
 (defun spell-fu--cache-file (dict)
-  "Return the location of the cache file."
+  "Return the location of the cache file with dictionary DICT."
   (expand-file-name (format "words_%s.el" dict) spell-fu-directory))
 
 (defun spell-fu--words-file (dict)
-  "Return the location of the word-list."
+  "Return the location of the word-list with dictionary DICT."
   (expand-file-name (format "words_%s.txt" dict) spell-fu-directory))
 
 
@@ -229,7 +229,7 @@ Argument POS return faces at this point."
 ;; Word List Generation
 
 (defun spell-fu--word-list-ensure (words-file dict)
-  "Ensure the word list is generated.
+  "Ensure the word list is generated with dictionary DICT.
 Argument WORDS-FILE the file to write the word list into."
   (let*
     (
@@ -327,7 +327,7 @@ save some time by not spending time reading it back."
 ;; Top level function, called when enabling the mode.
 
 (defun spell-fu--init-dictionary (dict)
-  "Setup the dictionary, initializing new files as necessary."
+  "Setup the dictionary, initializing new files as necessary with dictionary DICT."
 
   ;; Ensure our path exists.
   (unless (file-directory-p spell-fu-directory)

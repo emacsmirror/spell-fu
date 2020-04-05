@@ -27,35 +27,42 @@ Usage
 
 You may enable this globally which has the following defaults.
 
-- Programming modes spell check comments and strings.
-- All other major modes check all words.
-
 .. code-block:: elisp
 
-   ;; This package has not yet been accepted into melpa.
-   (use-package spell-fu)
+   (use-package spell-fu) ;; not yet in Melpa.
+
    (global-spell-fu-mode)
 
 Or you may wish to configure this per-mode, e.g:
 
 .. code-block:: elisp
 
-   (use-package spell-fu)
+   (use-package spell-fu) ;; not yet in Melpa.
 
    (add-hook 'org-mode-hook
      (lambda ()
        (setq spell-fu-faces-exclude '(org-meta-line org-link org-code))
        (spell-fu-mode)))
 
+   (add-hook 'emacs-lisp-mode-hook
+     (lambda ()
+       (spell-fu-mode)))
+
 
 Details
 -------
 
+- All programming modes only check comments and strings.
+- All other major modes check all words.
 - Currently this package requires ``aspell`` to generate the word-list.
 
 
 Customization
 -------------
+
+
+Global Settings
+^^^^^^^^^^^^^^^
 
 ``spell-fu-directory``
    The directory used for storing the dictionary cached.
@@ -69,7 +76,13 @@ Customization
 ``spell-fu-incorrect-face`` (red, underline)
    The font to use for the spell checking overlay.
 
-``spell-fu-syntax-table`` (buffer-local)
+
+Buffer Local Settings
+^^^^^^^^^^^^^^^^^^^^^
+
+You may wish to set these values differently based on the current major-mode.
+
+``spell-fu-syntax-table``
    The syntax table used for spell-checking.
 
    Useful when the current syntax-table for a major-mode is set for a programming language
@@ -83,6 +96,13 @@ Customization
 
 ``spell-fu-faces-exclude``
    When not ``nil``, text with faces in this list will be excluded.
+
+
+Advanced Buffer Local Settings
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+These options allow for applying your own rules to how the spell checker runs,
+they aren't necessary for typical usage.
 
 ``spell-fu-check-range``
    This is the main function which checks words,
@@ -98,15 +118,17 @@ Customization
 
    Note that setting this function causes the following settings to be ignored:
 
-   - ``spell-fu-word-regexp``
    - ``spell-fu-faces-include``
    - ``spell-fu-faces-exclude``
+   - ``spell-fu-word-regexp``
+   - ``spell-fu-syntax-table``
 
 
 Other Settings
 --------------
 
-Some settings are used which aren't part of this package:
+In most cases there is no need to change these settings,
+however they will be used when set:
 
 ``ispell-program-name``
    Used to call aspell (when this points to ``aspell``, otherwise ``aspell`` is called).
@@ -119,22 +141,21 @@ Some settings are used which aren't part of this package:
    When generating the word-list, this file is included when present.
 
 
-Limitations
-===========
-
-TODO.
-
-
-Installation
-============
-
-TODO.
-
-
 Other Packages
 ==============
 
-TODO.
+`FlySpell <https://www.emacswiki.org/emacs/FlySpell>`__
+   As of Emacs 28, this doesn't provide a way to automatically check all on-screen text,
+   and running this on an entire buffer can be slow.
+
+`WCheck Mode <https://github.com/tlikonen/wcheck-mode>`__
+   This is a close match to Spell-fu, the main differences is that it's calling a sub-process
+   on each word which gives slower results.
+   I also found it's configuration rather difficult to manage.
+
+   Spell-fu in contrast takes a different approach,
+   instead of exposing many advanced options,
+   you can set your own function to extract works from a region of text.
 
 
 TODO
@@ -143,3 +164,4 @@ TODO
 - Support alternates to ``aspell`` for generating word lists.
 - Support a custom command for generating a word list.
 - Support buffer local dictionaries.
+- Support going to next/previous misspelled word.

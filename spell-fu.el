@@ -177,7 +177,7 @@ Optional argument BODY runs with the message prefix."
   (let ((inhibit-field-text-motion t))
     `
     (save-excursion
-      ;; Extend the ranges to line start/end, leaving the point at the start.
+      ;; Extend the ranges to line start/end.
       (goto-char ,point-end)
       (setq ,point-end (line-end-position))
       (goto-char ,point-start)
@@ -201,7 +201,7 @@ Argument POS return faces at this point."
         (push faceprop faces))
       ((face-list-p faceprop)
         (dolist (face faceprop)
-          (if (facep face)
+          (when (facep face)
             (push face faces)))))
     faces))
 

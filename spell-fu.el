@@ -211,9 +211,12 @@ Argument POS return faces at this point."
 (defun spell-fu--file-is-older-list (file-test file-list)
   "Return t when FILE-TEST is older than any files in FILE-LIST."
   (catch 'result
-    (let ((file-test-time (nth 5 (file-attributes file-test))))
+    (let ((file-test-time (file-attribute-modification-time (file-attributes file-test))))
       (dolist (file-new file-list)
-        (when (time-less-p file-test-time (nth 5 (file-attributes file-new)))
+        (when
+          (time-less-p
+            file-test-time
+            (file-attribute-modification-time (file-attributes file-new)))
           (throw 'result t)))
       nil)))
 

@@ -113,9 +113,12 @@ Notes:
 ;; ---------------------------------------------------------------------------
 ;; Internal Variables
 
-;; Hash table, keep it global,
-;; although we could support buffer local dictionaries.
-(defvar spell-fu--cache-table nil)
+;; List of language, dictionary mappings.
+(defvar spell-fu--cache-table-alist nil)
+
+;; Buffer local dictionary.
+;; Note that this is typically the same dictionary shared across all buffers.
+(defvar-local spell-fu--cache-table nil)
 
 
 ;; ---------------------------------------------------------------------------
@@ -125,13 +128,13 @@ Notes:
   "Access the current dictionary."
   (or (bound-and-true-p ispell-local-dictionary) (bound-and-true-p ispell-dictionary) "default"))
 
-(defun spell-fu--cache-file ()
+(defun spell-fu--cache-file (dict)
   "Return the location of the cache file."
-  (expand-file-name (format "words_%s.el" (spell-fu--dictionary)) spell-fu-directory))
+  (expand-file-name (format "words_%s.el" dict) spell-fu-directory))
 
-(defun spell-fu--words-file ()
+(defun spell-fu--words-file (dict)
   "Return the location of the word-list."
-  (expand-file-name (format "words_%s.txt" (spell-fu--dictionary)) spell-fu-directory))
+  (expand-file-name (format "words_%s.txt" dict) spell-fu-directory))
 
 
 ;; ---------------------------------------------------------------------------
@@ -223,7 +226,7 @@ Argument POS return faces at this point."
 ;; ---------------------------------------------------------------------------
 ;; Word List Generation
 
-(defun spell-fu--word-list-ensure (words-file)
+(defun spell-fu--word-list-ensure (words-file dict)
   "Ensure the word list is generated.
 Argument WORDS-FILE the file to write the word list into."
   (let*
@@ -260,8 +263,7 @@ Argument WORDS-FILE the file to write the word list into."
                   (and
                     (bound-and-true-p ispell-really-aspell)
                     (bound-and-true-p ispell-program-name))
-                  (executable-find "aspell")))
-              (dict (spell-fu--dictionary)))
+                  (executable-find "aspell"))))
 
             (cond
               ((string-equal dict "default")
@@ -322,7 +324,7 @@ save some time by not spending time reading it back."
 ;;
 ;; Top level function, called when enabling the mode.
 
-(defun spell-fu--init-dictionary ()
+(defun spell-fu--init-dictionary (dict)
   "Setup the dictionary, initializing new files as necessary."
 
   ;; Ensure our path exists.
@@ -332,17 +334,26 @@ save some time by not spending time reading it back."
   (let
     ( ;; Get the paths of both files, ensure the cache file is newer,
       ;; otherwise regenerate it.
-      (words-file (spell-fu--words-file))
-      (cache-file (spell-fu--cache-file)))
+      (words-file (spell-fu--words-file dict))
+      (cache-file (spell-fu--cache-file dict)))
 
-    (spell-fu--word-list-ensure words-file)
+    (spell-fu--word-list-ensure words-file dict)
 
-    ;; Load cache or create it, creating it returns the cache
-    ;; to avoid some slow-down on first load.
-    (setq spell-fu--cache-table
-      (if (and (file-exists-p cache-file) (not (spell-fu--file-is-older cache-file words-file)))
-        (spell-fu--cache-words-load cache-file)
-        (spell-fu--cache-from-word-list words-file cache-file)))))
+
+    ;; Use previously loaded dictionary from language 'dict' where possible.
+    (setq spell-fu--cache-table (assoc-default dict spell-fu--cache-table-alist))
+
+    ;; Not loaded yet, initialize it.
+    (unless spell-fu--cache-table
+      ;; Load cache or create it, creating it returns the cache
+      ;; to avoid some slow-down on first load.
+      (setq spell-fu--cache-table
+        (if (and (file-exists-p cache-file) (not (spell-fu--file-is-older cache-file words-file)))
+          (spell-fu--cache-words-load cache-file)
+          (spell-fu--cache-from-word-list words-file cache-file)))
+
+      ;; Add to to `spell-fu--cache-table-alist' for reuse on next load.
+      (push '(dict . spell-fu--cache-table) spell-fu--cache-table-alist))))
 
 
 ;; ---------------------------------------------------------------------------
@@ -569,7 +580,7 @@ range POINT-START to POINT-END. Otherwise remove all overlays."
 
 (defun spell-fu-mode-enable ()
   "Turn on option `spell-fu-mode' for the current buffer."
-  (spell-fu--init-dictionary)
+  (spell-fu--init-dictionary (spell-fu--dictionary))
 
   ;; We may want defaults for other modes,
   ;; although keep this general.

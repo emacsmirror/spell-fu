@@ -137,6 +137,9 @@ however they will be used when set:
    When generating the word-list, this variable is used when present,
    otherwise aspell's default dictionary is used.
 
+``ispell-local-dictionary``
+   Setting this allows you to have different languages set per-buffer.
+
 ``ispell-personal-dictionary``
    When generating the word-list, this file is included when present.
 
@@ -163,5 +166,4 @@ TODO
 
 - Support alternates to ``aspell`` for generating word lists.
 - Support a custom command for generating a word list.
-- Support buffer local dictionaries.
 - Support going to next/previous misspelled word.

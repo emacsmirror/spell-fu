@@ -141,3 +141,5 @@ TODO
 ====
 
 - Support alternates to ``aspell`` for generating word lists.
+- Support a custom command for generating a word list.
+- Support buffer local dictionaries.

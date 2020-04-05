@@ -239,39 +239,41 @@ Argument WORDS-FILE the file to write the word list into."
 
     (when (or (not has-words-file) is-dict-outdated)
 
-      (message "Generating words %S" words-file)
-      (with-temp-buffer
-        ;; Optional: insert personal dictionary, stripping header and inserting a newline.
-        (when has-dict-personal
-          (insert-file-contents ispell-personal-dictionary)
-          (goto-char (point-min))
-          (when (looking-at "personal_ws\-")
-            (delete-region (line-beginning-position) (1+ (line-end-position))))
-          (goto-char (point-max))
-          (unless (eq ?\n (char-after))
-            (insert "\n")))
+      (spell-fu--with-message-prefix "Spell-fu generating words: "
+        (message "%S" (file-name-nondirectory words-file))
 
-        (let
-          ( ;; Use the pre-configured aspell binary, or call aspell directly.
-            (aspell-bin
-              (or
-                (and
-                  (bound-and-true-p ispell-really-aspell)
-                  (bound-and-true-p ispell-program-name))
-                (executable-find "aspell")))
-            (dict (spell-fu--dictionary)))
+        (with-temp-buffer
+          ;; Optional: insert personal dictionary, stripping header and inserting a newline.
+          (when has-dict-personal
+            (insert-file-contents ispell-personal-dictionary)
+            (goto-char (point-min))
+            (when (looking-at "personal_ws\-")
+              (delete-region (line-beginning-position) (1+ (line-end-position))))
+            (goto-char (point-max))
+            (unless (eq ?\n (char-after))
+              (insert "\n")))
 
-          (cond
-            ((string-equal dict "default")
-              (call-process aspell-bin nil t nil "dump" "master"))
-            (t
-              (call-process aspell-bin nil t nil "-d" dict "dump" "master"))))
+          (let
+            ( ;; Use the pre-configured aspell binary, or call aspell directly.
+              (aspell-bin
+                (or
+                  (and
+                    (bound-and-true-p ispell-really-aspell)
+                    (bound-and-true-p ispell-program-name))
+                  (executable-find "aspell")))
+              (dict (spell-fu--dictionary)))
 
-        ;; Case insensitive sort is important if this is used for `ispell-complete-word-dict'.
-        ;; Which is a handy double-use for this file.
-        (let ((sort-fold-case t))
-          (sort-lines nil (point-min) (point-max)))
-        (write-region nil nil words-file nil 0)))))
+            (cond
+              ((string-equal dict "default")
+                (call-process aspell-bin nil t nil "dump" "master"))
+              (t
+                (call-process aspell-bin nil t nil "-d" dict "dump" "master"))))
+
+          ;; Case insensitive sort is important if this is used for `ispell-complete-word-dict'.
+          ;; Which is a handy double-use for this file.
+          (let ((sort-fold-case t))
+            (sort-lines nil (point-min) (point-max)))
+          (write-region nil nil words-file nil 0))))))
 
 
 ;; ---------------------------------------------------------------------------
@@ -284,19 +286,25 @@ The resulting cache is returned as a minor optimization for first-time loading,
 where we need to create this data in order to write it,
 save some time by not spending time reading it back."
 
-  (message "Generating cache %S" cache-file)
   (let ((word-table nil))
-    (with-temp-buffer
-      (insert-file-contents-literally words-file)
-      (setq word-table (make-hash-table :test 'equal :size (count-lines (point-min) (point-max))))
-      (while (not (eobp))
-        (let ((l (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
-          ;; Value of 't' is just for simplicity, it's no used except for check the item exists.
-          (puthash (downcase l) t word-table)
-          (forward-line 1))))
 
-    ;; Write write it to a file.
-    (with-temp-buffer (prin1 word-table (current-buffer)) (write-region nil nil cache-file nil 0))
+    (spell-fu--with-message-prefix "Spell-fu generating cache: "
+      (message "%S" (file-name-nondirectory cache-file))
+
+      (with-temp-buffer
+        (insert-file-contents-literally words-file)
+        (setq word-table
+          (make-hash-table :test 'equal :size (count-lines (point-min) (point-max))))
+        (while (not (eobp))
+          (let ((l (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
+            ;; Value of 't' is just for simplicity, it's no used except for check the item exists.
+            (puthash (downcase l) t word-table)
+            (forward-line 1))))
+
+      ;; Write write it to a file.
+      (with-temp-buffer
+        (prin1 word-table (current-buffer))
+        (write-region nil nil cache-file nil 0)))
 
     ;; Return the resulting word table.
     word-table))
@@ -321,23 +329,20 @@ save some time by not spending time reading it back."
   (unless (file-directory-p spell-fu-directory)
     (make-directory spell-fu-directory))
 
-  ;; Generate word-list on demand.
-  (spell-fu--with-message-prefix "Spell-Fu: "
+  (let
+    ( ;; Get the paths of both files, ensure the cache file is newer,
+      ;; otherwise regenerate it.
+      (words-file (spell-fu--words-file))
+      (cache-file (spell-fu--cache-file)))
 
-    (let
-      ( ;; Get the paths of both files, ensure the cache file is newer,
-        ;; otherwise regenerate it.
-        (words-file (spell-fu--words-file))
-        (cache-file (spell-fu--cache-file)))
+    (spell-fu--word-list-ensure words-file)
 
-      (spell-fu--word-list-ensure words-file)
-
-      ;; Load cache or create it, creating it returns the cache
-      ;; to avoid some slow-down on first load.
-      (setq spell-fu--cache-table
-        (if (and (file-exists-p cache-file) (not (spell-fu--file-is-older cache-file words-file)))
-          (spell-fu--cache-words-load cache-file)
-          (spell-fu--cache-from-word-list words-file cache-file))))))
+    ;; Load cache or create it, creating it returns the cache
+    ;; to avoid some slow-down on first load.
+    (setq spell-fu--cache-table
+      (if (and (file-exists-p cache-file) (not (spell-fu--file-is-older cache-file words-file)))
+        (spell-fu--cache-words-load cache-file)
+        (spell-fu--cache-from-word-list words-file cache-file)))))
 
 
 ;; ---------------------------------------------------------------------------

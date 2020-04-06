@@ -172,7 +172,7 @@ Optional argument BODY runs with the depth override."
             (funcall ,add-hook-orig hook function ,depth-override local))))
       ,@body)))
 
-(defmacro spell-fu--expand-range-to-line-boundaries (point-start point-end)
+(defmacro spell-fu--setq-expand-range-to-line-boundaries (point-start point-end)
   "Set POINT-START the the line beginning, POINT-END to the line end."
   (declare (indent 1))
   ;; Ignore field boundaries.
@@ -491,7 +491,7 @@ Argument FACES-EXCLUDE faces to check POS excludes or ignored when nil."
 
 (defun spell-fu--font-lock-fontify-region (point-start point-end)
   "Update spelling for POINT-START & POINT-END to the queue, checking all text."
-  (spell-fu--expand-range-to-line-boundaries point-start point-end)
+  (spell-fu--setq-expand-range-to-line-boundaries point-start point-end)
   (funcall spell-fu-check-range point-start point-end))
 
 (defun spell-fu--immediate-enable ()
@@ -543,7 +543,7 @@ range POINT-START to POINT-END. Otherwise remove all overlays."
                 (point-end (min visible-end (overlay-end item-ov))))
 
               ;; Expand so we don't spell check half a word.
-              (spell-fu--expand-range-to-line-boundaries point-start point-end)
+              (spell-fu--setq-expand-range-to-line-boundaries point-start point-end)
 
               (when
                 (condition-case err

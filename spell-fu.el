@@ -52,9 +52,13 @@
 
 ;;; Code:
 
-(eval-when-compile
-  ;; For `ispell-personal-dictionary' and similar.
-  (require 'ispell))
+
+;; ---------------------------------------------------------------------------
+;; Require Dependencies
+
+(require 'cl-lib) ;; For `cl-letf', although using `cl' is otherwise avoided.
+(require 'faces) ;; For `face-list-p'.
+(require 'ispell) ;; For variables we read `ispell-personal-dictionary' local dictionary, etc.
 
 
 ;; ---------------------------------------------------------------------------
@@ -124,7 +128,7 @@ Notes:
 
 (defun spell-fu--dictionary ()
   "Access the current dictionary."
-  (or (bound-and-true-p ispell-local-dictionary) (bound-and-true-p ispell-dictionary) "default"))
+  (or ispell-local-dictionary ispell-dictionary "default"))
 
 (defun spell-fu--cache-file (dict)
   "Return the location of the cache file with dictionary DICT."
@@ -242,7 +246,7 @@ Argument POS return faces at this point."
 Argument WORDS-FILE the file to write the word list into."
   (let*
     (
-      (personal-words-file (bound-and-true-p ispell-personal-dictionary))
+      (personal-words-file ispell-personal-dictionary)
       (has-words-file (file-exists-p words-file))
       (has-dict-personal (and personal-words-file (file-exists-p personal-words-file)))
       (is-dict-outdated
@@ -277,11 +281,7 @@ Argument WORDS-FILE the file to write the word list into."
             (let
               ( ;; Use the pre-configured aspell binary, or call aspell directly.
                 (aspell-bin
-                  (or
-                    (and
-                      (bound-and-true-p ispell-really-aspell)
-                      (bound-and-true-p ispell-program-name))
-                    (executable-find "aspell"))))
+                  (or (and ispell-really-aspell ispell-program-name) (executable-find "aspell"))))
 
               (cond
                 ((string-equal dict "default")

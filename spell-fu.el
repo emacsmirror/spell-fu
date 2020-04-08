@@ -56,9 +56,10 @@
 ;; ---------------------------------------------------------------------------
 ;; Require Dependencies
 
-(require 'cl-lib) ;; For `cl-letf', although using `cl' is otherwise avoided.
-(require 'faces) ;; For `face-list-p'.
-(require 'ispell) ;; For variables we read `ispell-personal-dictionary' local dictionary, etc.
+;; For `face-list-p'.
+(require 'faces)
+;; For variables we read `ispell-personal-dictionary' local dictionary, etc.
+(require 'ispell)
 
 
 ;; ---------------------------------------------------------------------------
@@ -145,36 +146,39 @@ Notes:
 ;; Helpers, not directly related to checking spelling.
 ;;
 
+(defmacro spell-fu--with-advice (fn-orig where fn-advice &rest body)
+  "Execute BODY with advice temporarily enabled."
+  `
+  (let ((fn-advice-var ,fn-advice))
+    (unwind-protect
+      (progn
+        (advice-add ,fn-orig ,where fn-advice-var)
+        ,@body)
+      (advice-remove ,fn-orig fn-advice-var))))
 
 (defmacro spell-fu--with-message-prefix (prefix &rest body)
   "Add text before the message output.
 Argument PREFIX is the text to add at the start of the message.
 Optional argument BODY runs with the message prefix."
   (declare (indent 1))
-  (let ((message-orig (make-symbol "--spell-fu--with-message-prefix--")))
-    `
-    (cl-letf*
-      (
-        (,message-orig (symbol-function 'message))
-        ((symbol-function 'message)
-          (lambda (arg &rest args)
-            (apply ,message-orig (append (list (concat "%s" arg)) (list ,prefix) args)))))
-      ,@body)))
+  `
+  (spell-fu--with-advice 'message
+    :around
+    (lambda (fn-orig arg &rest args)
+      (apply fn-orig (append (list (concat "%s" arg)) (list ,prefix) args)))
+    ,@body))
 
 (defmacro spell-fu--with-add-hook-depth-override (depth-override &rest body)
   "Support overriding the depth of a hook added by an indirect call.
 Argument DEPTH-OVERRIDE the depth value to call `add-hook' with.
 Optional argument BODY runs with the depth override."
   (declare (indent 1))
-  (let ((add-hook-orig (make-symbol "--spell-fu--with-add-hook-depth-override--")))
-    `
-    (cl-letf*
-      (
-        (,add-hook-orig (symbol-function 'add-hook))
-        ((symbol-function 'add-hook)
-          (lambda (hook function &optional _depth local)
-            (funcall ,add-hook-orig hook function ,depth-override local))))
-      ,@body)))
+  `
+  (spell-fu--with-advice 'add-hook
+    :around
+    (lambda (fn-orig hook function &optional _depth local)
+      (funcall fn-orig hook function ,depth-override local))
+    ,@body))
 
 (defmacro spell-fu--setq-expand-range-to-line-boundaries (point-start point-end)
   "Set POINT-START the the line beginning, POINT-END to the line end."

@@ -147,7 +147,7 @@ Notes:
 ;;
 
 (defmacro spell-fu--with-advice (fn-orig where fn-advice &rest body)
-  "Execute BODY with advice temporarily enabled."
+  "Execute BODY with WHERE advice on FN-ORIG temporarily enabled."
   `
   (let ((fn-advice-var ,fn-advice))
     (unwind-protect

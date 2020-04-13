@@ -83,7 +83,7 @@ Set to 0.0 to highlight immediately (as part of syntax highlighting)."
 
 ;; See '-' as a word boundary \b, so 'full-screen' is detected as two words.
 (defvar-local spell-fu-syntax-table
-  (let ((table (standard-syntax-table)))
+  (let ((table (copy-syntax-table (standard-syntax-table))))
     (modify-syntax-entry ?- "-" table)
     table)
   "The syntax table to use when scanning words.")

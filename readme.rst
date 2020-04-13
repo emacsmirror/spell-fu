@@ -7,6 +7,8 @@ Fast highlighting of misspelled words.
 This is a light weight spell checker for Emacs,
 that runs from the syntax highlighter without starting external processes.
 
+Available on `Melpa <https://melpa.org/#/spell-fu>`__.
+
 
 Motivation
 ==========
@@ -29,15 +31,14 @@ You may enable this globally which has the following defaults.
 
 .. code-block:: elisp
 
-   (use-package spell-fu) ;; not yet in Melpa.
-
+   (use-package spell-fu)
    (global-spell-fu-mode)
 
 Or you may wish to configure this per-mode, e.g:
 
 .. code-block:: elisp
 
-   (use-package spell-fu) ;; not yet in Melpa.
+   (use-package spell-fu)
 
    (add-hook 'org-mode-hook
      (lambda ()
@@ -92,7 +93,7 @@ You may wish to set these values differently based on the current major-mode.
    The regular expression to use for scanning words.
 
 ``spell-fu-faces-include``
-   When not ``nil``, only faces that in this list will be checked.
+   When not ``nil``, only faces in this list will be checked.
 
 ``spell-fu-faces-exclude``
    When not ``nil``, text with faces in this list will be excluded.
@@ -168,4 +169,5 @@ TODO
 - Support a custom command for generating a word list.
 - Support going to next/previous misspelled word.
 - Support affix expansion when calling aspell (some non English dictionaries use this).
-- Support refreshing the word list when ispell updates the personal dictionary.
+- Support refreshing the word list at run-time when ispell updates the personal dictionary
+  *(currently updates require re-enabling the mode).*

@@ -330,7 +330,7 @@ save some time by not spending time reading it back."
       (with-temp-buffer
         (insert-file-contents-literally words-file)
         (setq word-table
-          (make-hash-table :test 'equal :size (count-lines (point-min) (point-max))))
+          (make-hash-table :test #'equal :size (count-lines (point-min) (point-max))))
         (while (not (eobp))
           (let ((l (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
             ;; Value of 't' is just for simplicity, it's no used except for check the item exists.
@@ -507,12 +507,12 @@ Argument FACES-EXCLUDE faces to check POS excludes or ignored when nil."
   ;; because we want the font faces (comments, string etc) to be set so
   ;; the spell checker can read these values which may include/exclude words.
   (spell-fu--with-add-hook-depth-override 100
-    (jit-lock-register 'spell-fu--font-lock-fontify-region)))
+    (jit-lock-register #'spell-fu--font-lock-fontify-region)))
 
 (defun spell-fu--immediate-disable ()
   "Disable immediate spell checking."
   (spell-fu--remove-overlays)
-  (jit-lock-unregister 'spell-fu--font-lock-fontify-region))
+  (jit-lock-unregister #'spell-fu--font-lock-fontify-region))
 
 
 ;; ---------------------------------------------------------------------------
@@ -588,7 +588,7 @@ range POINT-START to POINT-END. Otherwise remove all overlays."
   "Add the global idle timer."
   (unless spell-fu--idle-timer
     (setq spell-fu--idle-timer
-      (run-with-idle-timer spell-fu-idle-delay t 'spell-fu--idle-handle-pending-ranges))))
+      (run-with-idle-timer spell-fu-idle-delay t #'spell-fu--idle-handle-pending-ranges))))
 
 (defun spell-fu--idle-timer-disable ()
   "Remove the global idle timer."
@@ -603,12 +603,12 @@ range POINT-START to POINT-END. Otherwise remove all overlays."
   ;; Nevertheless, this avoids the possibility of spell checking
   ;; running before font-faces have been set.
   (spell-fu--with-add-hook-depth-override 100
-    (jit-lock-register 'spell-fu--idle-font-lock-region-pending))
+    (jit-lock-register #'spell-fu--idle-font-lock-region-pending))
   (spell-fu--idle-timer-enable))
 
 (defun spell-fu--idle-disable ()
   "Disable the idle style of updating."
-  (jit-lock-unregister 'spell-fu--idle-font-lock-region-pending)
+  (jit-lock-unregister #'spell-fu--idle-font-lock-region-pending)
   (spell-fu--idle-timer-disable)
   (spell-fu--idle-remove-overlays))
 

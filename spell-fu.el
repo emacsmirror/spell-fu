@@ -116,6 +116,11 @@ Notes:
 ;; ---------------------------------------------------------------------------
 ;; Internal Variables
 
+
+;; Use to ensure the cache is not from a previous release.
+;; Only ever increase.
+(defconst spell-fu--cache-version "0.1")
+
 ;; List of language, dictionary mappings.
 (defvar spell-fu--cache-table-alist nil)
 
@@ -133,7 +138,7 @@ Notes:
 
 (defun spell-fu--cache-file (dict)
   "Return the location of the cache file with dictionary DICT."
-  (expand-file-name (format "words_%s.el" dict) spell-fu-directory))
+  (expand-file-name (format "words_%s.el.data" dict) spell-fu-directory))
 
 (defun spell-fu--words-file (dict)
   "Return the location of the word-list with dictionary DICT."
@@ -315,43 +320,81 @@ Argument WORDS-FILE the file to write the word list into."
 ;; ---------------------------------------------------------------------------
 ;; Word List Cache
 
-(defun spell-fu--cache-from-word-list (words-file cache-file)
+(defun spell-fu--cache-from-word-list-impl (words-file cache-file)
   "Create CACHE-FILE from WORDS-FILE.
 
 The resulting cache is returned as a minor optimization for first-time loading,
 where we need to create this data in order to write it,
 save some time by not spending time reading it back."
+  (message "%S" (file-name-nondirectory cache-file))
+  (let
+    ( ;; The header, an associative list of items.
+      (cache-header (list (cons "version" spell-fu--cache-version)))
+      (word-table nil))
 
-  (let ((word-table nil))
+    (with-temp-buffer
+      (insert-file-contents-literally words-file)
+      (setq word-table (make-hash-table :test #'equal :size (count-lines (point-min) (point-max))))
+      (while (not (eobp))
+        (let ((l (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
+          ;; Value of 't' is just for simplicity, it's no used except for check the item exists.
+          (puthash (downcase l) t word-table)
+          (forward-line 1))))
 
-    (spell-fu--with-message-prefix "Spell-fu generating cache: "
-      (message "%S" (file-name-nondirectory cache-file))
-
-      (with-temp-buffer
-        (insert-file-contents-literally words-file)
-        (setq word-table
-          (make-hash-table :test #'equal :size (count-lines (point-min) (point-max))))
-        (while (not (eobp))
-          (let ((l (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
-            ;; Value of 't' is just for simplicity, it's no used except for check the item exists.
-            (puthash (downcase l) t word-table)
-            (forward-line 1))))
-
-      ;; Write write it to a file.
-      (with-temp-buffer
-        (prin1 word-table (current-buffer))
-        (write-region nil nil cache-file nil 0)))
+    ;; Write write it to a file.
+    (with-temp-buffer
+      (prin1 cache-header (current-buffer))
+      (prin1 word-table (current-buffer))
+      (write-region nil nil cache-file nil 0))
 
     ;; Return the resulting word table.
     word-table))
 
-(defun spell-fu--cache-words-load (cache-file)
-  "Return the Lisp content from reading CACHE-FILE."
+(defun spell-fu--cache-from-word-list (words-file cache-file)
+  "Create CACHE-FILE from WORDS-FILE."
+  (spell-fu--with-message-prefix "Spell-fu generating cache: "
+    (condition-case err
+      (spell-fu--cache-from-word-list-impl words-file cache-file)
+      (error
+        ;; Should be rare: if the file is corrupt or cannot be read for any reason.
+        (progn
+          (message "failed, %s" (error-message-string err))
+          nil)))))
+
+
+(defun spell-fu--cache-words-load-impl (cache-file)
+  "Return the Lisp content from reading CACHE-FILE.
+
+On failure of any kind, return nil, the caller will need to regenerate the cache."
   (with-temp-buffer
     (insert-file-contents-literally cache-file)
     (goto-char (point-min))
-    (read (current-buffer))))
 
+    ;; Check header.
+    (let ((cache-header (read (current-buffer))))
+      (unless (listp cache-header)
+        (error "Expected cache-header to be list, not %S" (type-of cache-header)))
+
+      (let ((version (assoc-default "version" cache-header)))
+        (unless (string-equal version spell-fu--cache-version)
+          (error "Require cache version %S, not %S" spell-fu--cache-version version))))
+
+    ;; Read the contents.
+    (let ((word-table (read (current-buffer))))
+      (unless (hash-table-p word-table)
+        (error "Expected cache to contain a hash-table, not %S" (type-of word-table)))
+      word-table)))
+
+(defun spell-fu--cache-words-load (cache-file)
+  "Return the Lisp content from reading CACHE-FILE."
+  (spell-fu--with-message-prefix "Spell-fu reading cache: "
+    (condition-case err
+      (spell-fu--cache-words-load-impl cache-file)
+      (error
+        ;; Should be rare: if the file is corrupt or cannot be read for any reason.
+        (progn
+          (message "failed, %s" (error-message-string err))
+          nil)))))
 
 ;; ---------------------------------------------------------------------------
 ;; Word List Initialization
@@ -382,8 +425,11 @@ save some time by not spending time reading it back."
       ;; Load cache or create it, creating it returns the cache
       ;; to avoid some slow-down on first load.
       (setq spell-fu--cache-table
-        (if (and (file-exists-p cache-file) (not (spell-fu--file-is-older cache-file words-file)))
-          (spell-fu--cache-words-load cache-file)
+        (or
+          (and
+            (file-exists-p cache-file)
+            (not (spell-fu--file-is-older cache-file words-file))
+            (spell-fu--cache-words-load cache-file))
           (spell-fu--cache-from-word-list words-file cache-file)))
 
       ;; Add to to `spell-fu--cache-table-alist' for reuse on next load.

@@ -396,6 +396,7 @@ On failure of any kind, return nil, the caller will need to regenerate the cache
           (message "failed, %s" (error-message-string err))
           nil)))))
 
+
 ;; ---------------------------------------------------------------------------
 ;; Word List Initialization
 ;;
@@ -572,55 +573,57 @@ If optional arguments POINT-START and POINT-END exist remove overlays from
 range POINT-START to POINT-END. Otherwise remove all overlays."
   (remove-overlays point-start point-end 'spell-fu-pending t))
 
+(defun spell-fu--idle-handle-pending-ranges-impl (visible-start visible-end)
+  "VISIBLE-START and VISIBLE-END typically from `window-start' and `window-end'.
+
+Although you can pass in specific ranges as needed,
+when checking the entire buffer for example."
+  (let ((overlays-in-view (overlays-in visible-start visible-end)))
+    (while overlays-in-view
+      (let ((item-ov (pop overlays-in-view)))
+        (when
+          (and
+            (overlay-get item-ov 'spell-fu-pending)
+            ;; It's possible these become invalid while looping over items.
+            (overlay-buffer item-ov))
+
+          (let
+            ( ;; Window clamped range.
+              (point-start (max visible-start (overlay-start item-ov)))
+              (point-end (min visible-end (overlay-end item-ov))))
+
+            ;; Expand so we don't spell check half a word.
+            (spell-fu--setq-expand-range-to-line-boundaries
+              ;; Warning these values are set in place.
+              point-start point-end)
+
+            (when
+              (condition-case err
+                ;; Needed so the idle timer won't quit mid-spelling.
+                (let ((inhibit-quit nil))
+                  (funcall spell-fu-check-range point-start point-end)
+                  t)
+                (error
+                  (progn
+                    ;; Keep since this should be very rare.
+                    (message "Early exit 'spell-fu-mode': %s" (error-message-string err))
+                    ;; Break out of the loop.
+                    (setq overlays-in-view nil)
+                    nil)))
+
+              ;; Don't delete the overlay since it may extend outside the window bounds,
+              ;; always delete the range instead.
+              ;;
+              ;; While we could remove everything in the window range,
+              ;; avoid this because it's possible `spell-fu-check-range' is interrupted.
+              ;; Allowing interrupting is important, so users may set this to a slower function
+              ;; which doesn't lock up Emacs as this is run from an idle timer.
+              (spell-fu--idle-remove-overlays point-start point-end))))))))
+
 (defun spell-fu--idle-handle-pending-ranges ()
   "Spell check the on-screen overlay ranges."
   (when (bound-and-true-p spell-fu-mode)
-    (let*
-      ( ;; Don't show the cursor motion from spell checking.
-        (visible-start (window-start))
-        (visible-end (window-end))
-        (overlays-in-view (overlays-in visible-start visible-end)))
-
-      (while overlays-in-view
-        (let ((item-ov (pop overlays-in-view)))
-          (when
-            (and
-              (overlay-get item-ov 'spell-fu-pending)
-              ;; It's possible these become invalid while looping over items.
-              (overlay-buffer item-ov))
-
-            (let
-              ( ;; Window clamped range.
-                (point-start (max visible-start (overlay-start item-ov)))
-                (point-end (min visible-end (overlay-end item-ov))))
-
-              ;; Expand so we don't spell check half a word.
-              (spell-fu--setq-expand-range-to-line-boundaries
-                ;; Warning these values are set in place.
-                point-start point-end)
-
-              (when
-                (condition-case err
-                  ;; Needed so the idle timer won't quit mid-spelling.
-                  (let ((inhibit-quit nil))
-                    (funcall spell-fu-check-range point-start point-end)
-                    t)
-                  (error
-                    (progn
-                      ;; Keep since this should be very rare.
-                      (message "Early exit 'spell-fu-mode': %s" (error-message-string err))
-                      ;; Break out of the loop.
-                      (setq overlays-in-view nil)
-                      nil)))
-
-                ;; Don't delete the overlay since it may extend outside the window bounds,
-                ;; always delete the range instead.
-                ;;
-                ;; While we could remove everything in the window range,
-                ;; avoid this because it's possible `spell-fu-check-range' is interrupted.
-                ;; Allowing interrupting is important, so users may set this to a slower function
-                ;; which doesn't lock up Emacs as this is run from an idle timer.
-                (spell-fu--idle-remove-overlays point-start point-end)))))))))
+    (spell-fu--idle-handle-pending-ranges-impl (window-start) (window-end))))
 
 (defun spell-fu--idle-font-lock-region-pending (point-start point-end)
   "Track the range to spell check, adding POINT-START & POINT-END to the queue."
@@ -658,6 +661,46 @@ range POINT-START to POINT-END. Otherwise remove all overlays."
   (spell-fu--remove-overlays)
   (spell-fu--idle-timer-disable)
   (spell-fu--idle-remove-overlays))
+
+
+;; ---------------------------------------------------------------------------
+;; Public Functions
+
+(defun spell-fu-region (&optional point-start point-end verbose)
+  "Spell check the region between POINT-START and POINT-END, VERBOSE reports the findings."
+  ;; Expand range to line bounds, when set.
+  (when (or point-start point-end)
+    (unless point-start
+      (setq point-start (point-min)))
+    (unless point-end
+      (setq point-end (point-max)))
+    (spell-fu--setq-expand-range-to-line-boundaries
+      ;; Warning these values are set in place.
+      point-start point-end))
+
+  (setq point-start (or point-start (point-min)))
+  (setq point-end (or point-end (point-max)))
+
+  (jit-lock-fontify-now point-start point-end)
+
+  ;; Ensure idle timer is handled immediately.
+  (cond
+    ((<= spell-fu-idle-delay 0.0)
+      nil)
+    (t
+      (spell-fu--idle-handle-pending-ranges-impl point-start point-end)))
+
+  (when verbose
+    (let ((count 0))
+      (dolist (item-ov (overlays-in point-start point-end))
+        (when (overlay-get item-ov 'spell-fu-mode)
+          (setq count (1+ count))))
+      (message "Spell-fu: %d misspelled word(s) found!" count))))
+
+(defun spell-fu-buffer ()
+  "Spell check the whole buffer."
+  (interactive)
+  (spell-fu-region nil nil t))
 
 
 ;; ---------------------------------------------------------------------------

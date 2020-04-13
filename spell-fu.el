@@ -557,8 +557,8 @@ Argument FACES-EXCLUDE faces to check POS excludes or ignored when nil."
 
 (defun spell-fu--immediate-disable ()
   "Disable immediate spell checking."
-  (spell-fu--remove-overlays)
-  (jit-lock-unregister #'spell-fu--font-lock-fontify-region))
+  (jit-lock-unregister #'spell-fu--font-lock-fontify-region)
+  (spell-fu--remove-overlays))
 
 
 ;; ---------------------------------------------------------------------------
@@ -655,6 +655,7 @@ range POINT-START to POINT-END. Otherwise remove all overlays."
 (defun spell-fu--idle-disable ()
   "Disable the idle style of updating."
   (jit-lock-unregister #'spell-fu--idle-font-lock-region-pending)
+  (spell-fu--remove-overlays)
   (spell-fu--idle-timer-disable)
   (spell-fu--idle-remove-overlays))
 
@@ -689,7 +690,7 @@ range POINT-START to POINT-END. Otherwise remove all overlays."
   "Turn off option `spell-fu-mode' for the current buffer."
   (cond
     ((<= spell-fu-idle-delay 0.0)
-      (spell-fu--immediate-enable))
+      (spell-fu--immediate-disable))
     (t
       (spell-fu--idle-disable))))
 

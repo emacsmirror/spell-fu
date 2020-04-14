@@ -97,7 +97,6 @@ Set to 0.0 to highlight immediately (as part of syntax highlighting)."
 (defvar-local spell-fu-faces-exclude nil
   "List of faces to check or nil to exclude none (used by `spell-fu-check-range').")
 
-
 (defvar-local spell-fu-check-range 'spell-fu-check-range-default
   "Function that takes a beginning and end points to check for the current buffer.
 
@@ -115,7 +114,6 @@ Notes:
 
 ;; ---------------------------------------------------------------------------
 ;; Internal Variables
-
 
 ;; Use to ensure the cache is not from a previous release.
 ;; Only ever increase.
@@ -361,7 +359,6 @@ save some time by not spending time reading it back."
           (message "failed, %s" (error-message-string err))
           nil)))))
 
-
 (defun spell-fu--cache-words-load-impl (cache-file)
   "Return the Lisp content from reading CACHE-FILE.
 
@@ -416,7 +413,6 @@ On failure of any kind, return nil, the caller will need to regenerate the cache
       (cache-file (spell-fu--cache-file dict)))
 
     (spell-fu--word-list-ensure words-file dict)
-
 
     ;; Use previously loaded dictionary from language 'dict' where possible.
     (setq spell-fu--cache-table (assoc-default dict spell-fu--cache-table-alist))
@@ -495,7 +491,6 @@ Argument FACES-EXCLUDE faces to check POS excludes or ignored when nil."
       (when (and (null result) (memq face faces-include))
         (setq result t)))
     result))
-
 
 (defun spell-fu--check-range-with-faces (point-start point-end)
   "Check spelling for POINT-START & POINT-END, checking text matching face rules."
@@ -702,6 +697,67 @@ when checking the entire buffer for example."
   (interactive)
   (spell-fu-region nil nil t))
 
+(defun spell-fu--goto-next-or-previous-error (dir)
+  "Jump to the next or previous error using DIR, return t when found, otherwise nil."
+  (let
+    ( ;; Track the closest point in a given line.
+      (point-found-delta most-positive-fixnum)
+      (point-init (point))
+      (point-prev nil)
+      (point-found nil))
+    (save-excursion
+      (while (and (null point-found) (not (equal (point) point-prev)))
+        (let
+          (
+            (point-start (line-beginning-position))
+            (point-end (line-end-position)))
+
+          (jit-lock-fontify-now point-start point-end)
+
+          ;; Ensure idle timer is handled immediately.
+          (cond
+            ((<= spell-fu-idle-delay 0.0)
+              nil)
+            (t
+              (spell-fu--idle-handle-pending-ranges-impl point-start point-end)))
+
+          (dolist (item-ov (overlays-in point-start point-end))
+            (when (overlay-get item-ov 'spell-fu-mode)
+              (let
+                (
+                  (item-start (overlay-start item-ov))
+                  (item-end (overlay-end item-ov)))
+                (when
+                  (if (< dir 0)
+                    (< item-end point-init)
+                    (> item-start point-init))
+                  (let ((test-delta (abs (- point-init item-start))))
+                    (when (< test-delta point-found-delta)
+                      (setq point-found item-start)
+                      (setq point-found-delta test-delta))))))))
+        (setq point-prev (point))
+        (forward-line dir)))
+
+    (if point-found
+      (progn
+        (goto-char point-found)
+        t)
+      (message
+        "Spell-fu: no %s spelling error found"
+        (if (< dir 0)
+          "previous"
+          "next"))
+      nil)))
+
+(defun spell-fu-goto-next-error ()
+  "Jump to the next error, return t when found, otherwise nil."
+  (interactive)
+  (spell-fu--goto-next-or-previous-error 1))
+
+(defun spell-fu-goto-previous-error ()
+  "Jump to the previous error, return t when found, otherwise nil."
+  (interactive)
+  (spell-fu--goto-next-or-previous-error -1))
 
 ;; ---------------------------------------------------------------------------
 ;; Define Minor Mode

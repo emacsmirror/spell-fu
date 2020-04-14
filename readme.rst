@@ -145,6 +145,22 @@ however they will be used when set:
    When generating the word-list, this file is included when present.
 
 
+Commands
+--------
+
+While this package is intended to be used with minimal interaction,
+there are some commands provided which may come in handy.
+
+``spell-fu-goto-next-error``
+   Moves the point to the next error.
+
+``spell-fu-goto-previous-error``
+   Moves the point to the previous error.
+
+``spell-fu-buffer``
+   Checks spelling for the entire buffer, reporting the number of misspelled words found.
+
+
 Other Packages
 ==============
 
@@ -167,7 +183,6 @@ TODO
 
 - Support alternates to ``aspell`` for generating word lists.
 - Support a custom command for generating a word list.
-- Support going to next/previous misspelled word.
 - Support affix expansion when calling aspell (some non English dictionaries use this).
 - Support refreshing the word list at run-time when ispell updates the personal dictionary
   *(currently updates require re-enabling the mode).*

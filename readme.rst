@@ -160,6 +160,12 @@ there are some commands provided which may come in handy.
 ``spell-fu-buffer``
    Checks spelling for the entire buffer, reporting the number of misspelled words found.
 
+``spell-fu-word-add``
+   Add the word under the cursor to the personal dictionary.
+
+``spell-fu-word-remove``
+   Remove the word under the cursor from the personal dictionary.
+
 
 Other Packages
 ==============

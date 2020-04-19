@@ -6,7 +6,7 @@
 
 ;; URL: https://gitlab.com/ideasman42/emacs-spell-fu-mode
 ;; Keywords: convenience
-;; Version: 0.1
+;; Version: 0.2
 ;; Package-Requires: ((emacs "26.2"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -399,26 +399,28 @@ On failure of any kind, return nil, the caller will need to regenerate the cache
 ;;
 ;; Top level function, called when enabling the mode.
 
-(defun spell-fu--init-dictionary (dict)
+(defun spell-fu--ensure-dict (dict)
   "Setup the dictionary, initializing new files as necessary with dictionary DICT."
 
-  ;; Ensure our path exists.
-  (unless (file-directory-p spell-fu-directory)
-    (make-directory spell-fu-directory))
+  ;; First use the dictionary if it's in memory.
+  ;; Once Emacs is running, this is used for all new buffers.
+  (setq spell-fu--cache-table (assoc-default dict spell-fu--cache-table-alist))
 
-  (let
-    ( ;; Get the paths of both files, ensure the cache file is newer,
-      ;; otherwise regenerate it.
-      (words-file (spell-fu--words-file dict))
-      (cache-file (spell-fu--cache-file dict)))
+  ;; Not loaded yet, initialize it.
+  (unless spell-fu--cache-table
 
-    (spell-fu--word-list-ensure words-file dict)
+    ;; Ensure our path exists.
+    (unless (file-directory-p spell-fu-directory)
+      (make-directory spell-fu-directory))
 
-    ;; Use previously loaded dictionary from language 'dict' where possible.
-    (setq spell-fu--cache-table (assoc-default dict spell-fu--cache-table-alist))
+    (let
+      ( ;; Get the paths of both files, ensure the cache file is newer,
+        ;; otherwise regenerate it.
+        (words-file (spell-fu--words-file dict))
+        (cache-file (spell-fu--cache-file dict)))
 
-    ;; Not loaded yet, initialize it.
-    (unless spell-fu--cache-table
+      (spell-fu--word-list-ensure words-file dict)
+
       ;; Load cache or create it, creating it returns the cache
       ;; to avoid some slow-down on first load.
       (setq spell-fu--cache-table
@@ -430,7 +432,7 @@ On failure of any kind, return nil, the caller will need to regenerate the cache
           (spell-fu--cache-from-word-list words-file cache-file)))
 
       ;; Add to to `spell-fu--cache-table-alist' for reuse on next load.
-      (push '(dict . spell-fu--cache-table) spell-fu--cache-table-alist))))
+      (push (cons dict spell-fu--cache-table) spell-fu--cache-table-alist))))
 
 
 ;; ---------------------------------------------------------------------------
@@ -759,6 +761,180 @@ when checking the entire buffer for example."
   (interactive)
   (spell-fu--goto-next-or-previous-error -1))
 
+
+;; ---------------------------------------------------------------------------
+;; Personal Dictionary Management
+;;
+
+(defun spell-fu--buffers-refresh-with-cache-table (cache-table)
+  "Reset spell-checked overlays for buffers using the dictionary from CACHE-TABLE."
+  (dolist (buf (buffer-list))
+    (with-current-buffer buf
+      (when (bound-and-true-p spell-fu-mode)
+        (when (eq cache-table (bound-and-true-p spell-fu--cache-table))
+          ;; For now simply clear syntax highlighting.
+          (unless (<= spell-fu-idle-delay 0.0)
+            (spell-fu--idle-remove-overlays))
+          (spell-fu--remove-overlays)
+          (font-lock-flush))))))
+
+(defun spell-fu--word-add-or-remove (word words-file action)
+  "Apply ACTION to WORD from the personal dictionary WORDS-FILE.
+
+Return t when the action succeeded."
+  (catch 'result
+    (spell-fu--with-message-prefix "Spell-fu: "
+      (unless word
+        (message "word not found!")
+        (throw 'result nil))
+      (unless words-file
+        (message "personal dictionary not defined!")
+        (throw 'result nil))
+
+      (let ((this-cache-table spell-fu--cache-table))
+        (with-temp-buffer
+          (insert-file-contents-literally words-file)
+
+          ;; Ensure newline at EOF,
+          ;; not essential but complicates sorted add if we don't do this.
+          ;; also ensures we can step past the header which _could_ be a single line
+          ;; without anything below it.
+          (goto-char (point-max))
+          (unless
+            (string-blank-p
+              (buffer-substring-no-properties (line-beginning-position) (line-end-position)))
+            (insert "\n"))
+          ;; Delete extra blank lines.
+          ;; So we can use line count as word count.
+          (while
+            (and
+              (eq 0 (forward-line -1))
+              (string-blank-p
+                (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
+            (delete-region
+              (line-beginning-position)
+              (progn
+                (forward-line -1)
+                (point))))
+
+          (goto-char (point-min))
+
+          ;; Case insensitive.
+          (let
+            (
+              (changed nil)
+              (header-match
+                (save-match-data
+                  (when
+                    ;; Match a line like: personal_ws-1.1 en 66
+                    (looking-at
+                      (concat
+                        "personal_ws\\-[[:digit:]\\.]+"
+                        "[[:blank:]]+"
+                        "[A-Za-z_]+"
+                        "[[:blank:]]+"
+                        "\\([[:digit:]]+\\)"))
+                    (forward-line 1)
+                    (match-data))))
+              (word-point
+                (save-match-data
+                  (let ((case-fold-search t))
+                    (when
+                      (re-search-forward (concat "^" (regexp-quote word) "[[:blank:]]*$") nil t)
+                      (match-beginning 0))))))
+
+            (cond
+              ((eq action 'add)
+                (when word-point
+                  (message "\"%s\" already in the personal dictionary." word)
+                  (throw 'result nil))
+
+
+                (let ((keep-searching t))
+                  (while
+                    (and
+                      keep-searching
+                      (string-lessp
+                        (buffer-substring-no-properties
+                          (line-beginning-position)
+                          (line-end-position))
+                        word))
+                    (setq keep-searching (eq 0 (forward-line 1)))))
+
+                (insert word "\n")
+
+                (puthash (downcase word) t this-cache-table)
+
+                (message "\"%s\" successfully added!" word)
+                (setq changed t))
+
+              ((eq action 'remove)
+                (unless word-point
+                  (message "\"%s\" not in the personal dictionary." word)
+                  (throw 'result nil))
+
+                ;; Delete line.
+                (goto-char word-point)
+                (delete-region
+                  (line-beginning-position)
+                  (or (and (eq 0 (forward-line 1)) (point)) (line-end-position)))
+
+                (remhash (downcase word) this-cache-table)
+
+                (message "\"%s\" successfully removed!" word)
+                (setq changed t))
+
+              (t ;; Internal error, should never happen.
+                (error "Invalid action %S" action)))
+
+            (when changed
+              (when header-match
+                (save-match-data
+                  (set-match-data header-match)
+                  (replace-match
+                    (number-to-string (1- (count-lines (point-min) (point-max))))
+                    t
+                    nil
+                    nil
+                    1)))
+
+              (write-region nil nil words-file nil 0)
+
+              (spell-fu--buffers-refresh-with-cache-table this-cache-table)
+              t)))))))
+
+(defun spell-fu--word-at-point ()
+  "Return the word at the current point or nil."
+  (let
+    (
+      (point-init (point))
+      (point-start (line-beginning-position))
+      (point-end (line-end-position)))
+    (save-excursion
+      (goto-char point-start)
+      (catch 'result
+        (with-syntax-table spell-fu-syntax-table
+          (save-match-data
+            (while (re-search-forward spell-fu-word-regexp point-end t)
+              (when (and (<= (match-beginning 0) point-init) (<= point-init (match-end 0)))
+                (throw 'result (match-string-no-properties 0))))))
+        (throw 'result nil)))))
+
+(defun spell-fu-word-add ()
+  "Add the current word to the personal dictionary.
+
+Return t when the word has been added."
+  (interactive)
+  (spell-fu--word-add-or-remove (spell-fu--word-at-point) ispell-personal-dictionary 'add))
+
+(defun spell-fu-word-remove ()
+  "Remove the current word from the personal dictionary.
+
+Return t when the word is removed."
+  (interactive)
+  (spell-fu--word-add-or-remove (spell-fu--word-at-point) ispell-personal-dictionary 'remove))
+
+
 ;; ---------------------------------------------------------------------------
 ;; Define Minor Mode
 ;;
@@ -767,7 +943,7 @@ when checking the entire buffer for example."
 
 (defun spell-fu-mode-enable ()
   "Turn on option `spell-fu-mode' for the current buffer."
-  (spell-fu--init-dictionary (spell-fu--dictionary))
+  (spell-fu--ensure-dict (spell-fu--dictionary))
 
   ;; We may want defaults for other modes,
   ;; although keep this general.

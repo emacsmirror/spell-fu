@@ -77,7 +77,9 @@ Set to 0.0 to highlight immediately (as part of syntax highlighting)."
   :type 'float)
 
 (defface spell-fu-incorrect-face
-  '((t (:underline (:color "red" :style wave))))
+  '
+  ((((supports :underline (:style wave))) :underline (:style wave :color "red"))
+    (t :underline t :inherit error))
   "Face for incorrect spelling."
   :group 'spell-fu)
 

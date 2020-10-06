@@ -277,7 +277,7 @@ Argument WORDS-FILE the file to write the word list into."
             (when has-dict-personal
               (insert-file-contents personal-words-file)
               (goto-char (point-min))
-              (when (looking-at "personal_ws\-")
+              (when (looking-at "personal_ws-")
                 (delete-region (line-beginning-position) (1+ (line-end-position))))
               (goto-char (point-max))
               (unless (eq ?\n (char-after))
@@ -831,7 +831,7 @@ Return t when the action succeeded."
                     ;; Match a line like: personal_ws-1.1 en 66
                     (looking-at
                       (concat
-                        "personal_ws\\-[[:digit:]\\.]+"
+                        "personal_ws-[[:digit:]\\.]+"
                         "[[:blank:]]+"
                         "[A-Za-z_]+"
                         "[[:blank:]]+"

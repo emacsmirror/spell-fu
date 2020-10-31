@@ -4,7 +4,7 @@
 
 ;; Author: Campbell Barton <ideasman42@gmail.com>
 
-;; URL: https://gitlab.com/ideasman42/emacs-spell-fu-mode
+;; URL: https://gitlab.com/ideasman42/emacs-spell-fu
 ;; Keywords: convenience
 ;; Version: 0.2
 ;; Package-Requires: ((emacs "26.2"))

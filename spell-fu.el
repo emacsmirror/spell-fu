@@ -463,7 +463,7 @@ range POINT-START to POINT-END. Otherwise remove all overlays."
 Marking the spelling as incorrect using `spell-fu-incorrect-face' on failure.
 Argument POINT-START the beginning position of WORD.
 Argument POINT-END the end position of WORD."
-  (unless (gethash (downcase word) spell-fu--cache-table nil)
+  (unless (gethash (encode-coding-string (downcase word) 'utf-8) spell-fu--cache-table nil)
     ;; Ignore all uppercase words.
     (unless (equal word (upcase word))
       (spell-fu-mark-incorrect point-start point-end))))

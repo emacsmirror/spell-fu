@@ -90,7 +90,18 @@ Set to 0.0 to highlight immediately (as part of syntax highlighting)."
     table)
   "The syntax table to use when scanning words.")
 
-(defvar-local spell-fu-word-regexp "\\b\\([[:alpha:]][[:alpha:]']*\\)\\b"
+;; This regex handles:
+;;
+;; - ``Quotation'' <= don't match multiple trailing apostrophes.
+;;     ^^^^^^^^^
+;;
+;; - we're <= Connect letters with a single apostrophe.
+;;   ^^^^^
+;;
+;; - don't''join <= don't connect multiple apostrophes.
+;;   ^^^^^  ^^^^
+;;
+(defvar-local spell-fu-word-regexp "\\b\\([[:alpha:]][[:alpha:]]*\\('[[:alpha:]]*\\)?\\)\\b"
   "The regular expression used to scan for words to check (used by `spell-fu-check-range').")
 
 (defvar-local spell-fu-faces-include nil

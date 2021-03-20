@@ -65,6 +65,10 @@
 ;; ---------------------------------------------------------------------------
 ;; Custom Variables
 
+(defgroup spell-fu nil
+  "Fast, configurable spell checking of visible text, updated on a timer."
+  :group 'ispell)
+
 (defcustom spell-fu-directory (locate-user-emacs-file "spell-fu" ".emacs-spell-fu")
   "The directory to store undo data."
   :group 'spell-fu
@@ -102,7 +106,7 @@ Set to 0.0 to highlight immediately (as part of syntax highlighting)."
 ;;   ^^^^^  ^^^^
 ;;
 (defvar-local spell-fu-word-regexp "\\b\\([[:alpha:]][[:alpha:]]*\\('[[:alpha:]]*\\)?\\)\\b"
-  "The regular expression used to scan for words to check (used by `spell-fu-check-range').")
+  "Regex used to scan for words to check (used by `spell-fu-check-range').")
 
 (defvar-local spell-fu-faces-include nil
   "List of faces to check or nil to include all (used by `spell-fu-check-range').")
@@ -111,7 +115,7 @@ Set to 0.0 to highlight immediately (as part of syntax highlighting)."
   "List of faces to check or nil to exclude none (used by `spell-fu-check-range').")
 
 (defvar-local spell-fu-check-range 'spell-fu-check-range-default
-  "Function that takes a beginning and end points to check for the current buffer.
+  "Function that takes a beginning & end points to check for the current buffer.
 
 Users may want to write their own functions to have more control
 over which words are being checked.
@@ -984,7 +988,8 @@ Return t when the word is removed."
 
 ;;;###autoload
 (define-minor-mode spell-fu-mode
-  "Toggle `spell-fu-mode' in the current buffer."
+  "Toggle variable `spell-fu-mode' in the current buffer."
+  :group 'spell-fu
   :global nil
 
   (cond

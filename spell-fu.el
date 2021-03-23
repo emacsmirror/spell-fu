@@ -353,7 +353,7 @@ save some time by not spending time reading it back."
       (while (not (eobp))
         (let ((l (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
           ;; Value of 't' is just for simplicity, it's no used except for check the item exists.
-          (puthash (downcase l) t word-table)
+          (puthash (encode-coding-string (downcase l) 'utf-8) t word-table)
           (forward-line 1))))
 
     ;; Write write it to a file.

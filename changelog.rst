@@ -3,9 +3,10 @@
 Change Log
 ##########
 
-- In development
+- Version 0.3 (2021-03-28)
 
-  - <none>
+  - Support affix expansion when calling ``aspell`` (some non English dictionaries use this).
+  - Use explicit ``utf-8`` encoding, (fixes issue #8).
 
 - Version 0.2 (2020-04-26)
 

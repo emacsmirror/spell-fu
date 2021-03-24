@@ -6,7 +6,7 @@
 
 ;; URL: https://gitlab.com/ideasman42/emacs-spell-fu
 ;; Keywords: convenience
-;; Version: 0.2
+;; Version: 0.3
 ;; Package-Requires: ((emacs "26.2"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -354,7 +354,29 @@ Argument WORDS-FILE the file to write the word list into."
                 ((string-equal dict "default")
                   (call-process aspell-bin nil t nil "dump" "master"))
                 (t
-                  (call-process aspell-bin nil t nil "-d" dict "dump" "master"))))
+                  (call-process aspell-bin nil t nil "-d" dict "dump" "master")))
+
+              ;; Check whether the dictionary has affixes, expand if necessary.
+              (when (re-search-backward "^[[:alpha:]]*/[[:alnum:]]*$" nil t)
+                (let ((lang (spell-fu--aspell-lang-from-dict dict)))
+                  (unless
+                    (zerop
+                      (shell-command-on-region
+                        (point-min) (point-max)
+                        (if lang
+                          (format "%s -l %s expand" aspell-bin lang)
+                          (format "%s expand" aspell-bin))
+                        t t
+                        ;; Output any errors into the message buffer instead of the word-list.
+                        "*spell-fu word generation errors*"))
+                    (message
+                      (format
+                        "spell-fu: affix extension for dictionary '%s' failed (with language: %S)."
+                        dict
+                        lang)))
+                  (goto-char (point-min))
+                  (while (search-forward " " nil t)
+                    (replace-match "\n")))))
 
             (setq word-list (spell-fu--buffer-as-line-list (current-buffer) word-list)))
 

@@ -189,6 +189,5 @@ TODO
 
 - Support alternates to ``aspell`` for generating word lists.
 - Support a custom command for generating a word list.
-- Support affix expansion when calling aspell (some non English dictionaries use this).
 - Support refreshing the word list at run-time when ispell updates the personal dictionary
   *(currently updates require re-enabling the mode).*

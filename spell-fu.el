@@ -159,6 +159,49 @@ Notes:
   "Return the location of the word-list with dictionary DICT."
   (expand-file-name (format "words_%s.txt" dict) spell-fu-directory))
 
+(defun spell-fu--aspell-find-data-file (dict)
+  "For Aspell dictionary DICT, return an associated data file path or nil."
+  ;; Based on `ispell-aspell-find-dictionary'.
+
+  ;; Make sure `ispell-aspell-dict-dir' is defined.
+  (unless ispell-aspell-dict-dir
+    (setq ispell-aspell-dict-dir (ispell-get-aspell-config-value "dict-dir")))
+
+  ;; Make sure `ispell-aspell-data-dir' is defined.
+  (unless ispell-aspell-data-dir
+    (setq ispell-aspell-data-dir (ispell-get-aspell-config-value "data-dir")))
+
+  ;; Try finding associated data-file. aspell will look for master .dat
+  ;; file in `dict-dir' and `data-dir'. Associated .dat files must be
+  ;; in the same directory as master file.
+  (catch 'datafile
+    (save-match-data
+      (dolist (tmp-path (list ispell-aspell-dict-dir ispell-aspell-data-dir))
+        ;; Try `xx.dat' first, strip out variant, country code, etc,
+        ;; then try `xx_YY.dat' (without stripping country code),
+        ;; then try `xx-alt.dat', for `de-alt' etc.
+        (dolist (dict-re (list "^[[:alpha:]]+" "^[[:alpha:]_]+" "^[[:alpha:]]+-\\(alt\\|old\\)"))
+          (let ((dict-match (and (string-match dict-re dict) (match-string 0 dict))))
+            (when dict-match
+              (let ((fullpath (concat (file-name-as-directory tmp-path) dict-match ".dat")))
+                (if (file-readable-p fullpath)
+                  (throw 'datafile fullpath))))))))))
+
+(defun spell-fu--aspell-lang-from-dict (dict)
+  "Return the language of a DICT or nil if identification fails.
+
+Supports aspell alias dictionaries, e.g. 'german' or 'deutsch'
+for 'de_DE' using Ispell's lookup routines. The language is
+identified by looking for the data file associated with the
+dictionary."
+  (unless ispell-aspell-dictionary-alist
+    (ispell-find-aspell-dictionaries))
+  (let ((dict-name (cadr (nth 5 (assoc dict ispell-aspell-dictionary-alist)))))
+    (when dict-name
+      (let ((data-file (spell-fu--aspell-find-data-file dict-name)))
+        (when data-file
+          (file-name-base data-file))))))
+
 
 ;; ---------------------------------------------------------------------------
 ;; Generic Utility Functions

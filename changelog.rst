@@ -7,6 +7,7 @@ Change Log
 
   - Support affix expansion when calling ``aspell`` (some non English dictionaries use this).
   - Use explicit ``utf-8`` encoding, (fixes issue #8).
+  - Improve default ``spell-fu-word-regexp`` to better differentiate quoted text from apostrophes (fixes issue #3).
 
 - Version 0.2 (2020-04-26)
 

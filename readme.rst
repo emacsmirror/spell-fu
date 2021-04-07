@@ -50,14 +50,6 @@ Or you may wish to configure this per-mode, e.g:
        (spell-fu-mode)))
 
 
-Details
--------
-
-- All programming modes only check comments and strings.
-- All other major modes check all words.
-- Currently this package requires ``aspell`` to generate the word-list.
-
-
 Customization
 -------------
 
@@ -165,6 +157,14 @@ there are some commands provided which may come in handy.
 
 ``spell-fu-word-remove``
    Remove the word under the cursor from the personal dictionary.
+
+
+Details
+=======
+
+- All programming modes only check comments and strings.
+- All other major modes check all words.
+- Currently this package requires ``aspell`` to generate the word-list.
 
 
 Other Packages

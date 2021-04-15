@@ -1075,7 +1075,7 @@ Return t when the word is removed."
     (t
       (spell-fu-mode-disable))))
 
-(defun spell-fu-mode--turn-on ()
+(defun spell-fu--mode-turn-on ()
   "Enable the option `spell-fu-mode' where possible."
   (when
     (and
@@ -1088,7 +1088,7 @@ Return t when the word is removed."
     (spell-fu-mode 1)))
 
 ;;;###autoload
-(define-globalized-minor-mode global-spell-fu-mode spell-fu-mode spell-fu-mode--turn-on)
+(define-globalized-minor-mode global-spell-fu-mode spell-fu-mode spell-fu--mode-turn-on)
 
 (provide 'spell-fu)
 ;;; spell-fu.el ends here

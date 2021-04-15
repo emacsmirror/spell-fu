@@ -69,6 +69,9 @@ Global Settings
 ``spell-fu-incorrect-face`` (red, underline)
    The font to use for the spell checking overlay.
 
+``global-spell-fu-ignore-modes`` nil
+   A list of modes that won't enable spell-checking from ``global-spell-fu-mode``.
+
 
 Buffer Local Settings
 ^^^^^^^^^^^^^^^^^^^^^
@@ -89,6 +92,21 @@ You may wish to set these values differently based on the current major-mode.
 
 ``spell-fu-faces-exclude``
    When not ``nil``, text with faces in this list will be excluded.
+
+``global-spell-fu-ignore-buffer``
+   When not ``nil``, the buffer won't enable spell-checking from ``global-spell-fu-mode``.
+
+   This may also be a function that takes a single buffer argument,
+   where returning ``nil`` will enable spell-checking, anything else will not.
+
+   This example shows spell-fu being disabled for ORG mode and for read-only buffers.
+
+   .. code-block:: elisp
+
+      (setq spell-fu-ignore-modes (list 'org-mode))
+      (setq global-spell-fu-ignore-buffer (lambda (buf) (buffer-local-value 'buffer-read-only buf)))
+
+      (global-spell-fu-mode)
 
 
 Advanced Buffer Local Settings

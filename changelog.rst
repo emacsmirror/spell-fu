@@ -3,6 +3,11 @@
 Change Log
 ##########
 
+- In development.
+
+  - Support conditionally disabling ``global-spell-fu-mode`` via
+    ``global-spell-fu-ignore-buffer`` & ``global-spell-fu-ignore-modes``.
+
 - Version 0.3 (2021-03-28)
 
   - Support affix expansion when calling ``aspell`` (some non English dictionaries use this).

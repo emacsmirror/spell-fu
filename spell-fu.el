@@ -80,6 +80,18 @@ Set to 0.0 to highlight immediately (as part of syntax highlighting)."
   :group 'spell-fu
   :type 'float)
 
+(defcustom spell-fu-ignore-modes nil
+  "List of major-modes to exclude when `spell-fu' has been enabled globally."
+  :type '(repeat symbol)
+  :group 'spell-fu)
+
+(defvar-local global-spell-fu-ignore-buffer nil
+  "When non-nil, Global `spell-fu' Mode will not be enabled for this buffer.
+This variable can also be a predicate function, in which case
+it'll be called with one parameter (the buffer in question), and
+it should return non-nil to make Global `spell-fu' Mode not
+check this buffer.")
+
 (defface spell-fu-incorrect-face
   '
   ((((supports :underline (:style wave))) :underline (:style wave :color "red"))
@@ -1063,13 +1075,20 @@ Return t when the word is removed."
     (t
       (spell-fu-mode-disable))))
 
-(defun spell-fu-mode-turn-on ()
+(defun spell-fu-mode--turn-on ()
   "Enable the option `spell-fu-mode' where possible."
-  (when (and (not (minibufferp)) (not spell-fu-mode))
+  (when
+    (and
+      (not spell-fu-mode) (not (minibufferp)) (not (memq major-mode spell-fu-ignore-modes))
+      (or
+        (null global-spell-fu-ignore-buffer)
+        (if (functionp global-spell-fu-ignore-buffer)
+          (not (funcall global-spell-fu-ignore-buffer (current-buffer)))
+          nil)))
     (spell-fu-mode 1)))
 
 ;;;###autoload
-(define-globalized-minor-mode global-spell-fu-mode spell-fu-mode spell-fu-mode-turn-on)
+(define-globalized-minor-mode global-spell-fu-mode spell-fu-mode spell-fu-mode--turn-on)
 
 (provide 'spell-fu)
 ;;; spell-fu.el ends here

@@ -1079,7 +1079,16 @@ Return t when the word is removed."
   "Enable the option `spell-fu-mode' where possible."
   (when
     (and
-      (not spell-fu-mode) (not (minibufferp)) (not (memq major-mode spell-fu-ignore-modes))
+      ;; Not already enabled.
+      (not spell-fu-mode)
+      ;; Not in the mini-buffer.
+      (not (minibufferp))
+      ;; Not a special mode (package list, tabulated data ... etc)
+      ;; Instead the buffer is likely derived from `text-mode' or `prog-mode'.
+      (not (derived-mode-p 'special-mode))
+      ;; Not explicitly ignored.
+      (not (memq major-mode spell-fu-ignore-modes))
+      ;; Optionally check if a function is used.
       (or
         (null global-spell-fu-ignore-buffer)
         (if (functionp global-spell-fu-ignore-buffer)

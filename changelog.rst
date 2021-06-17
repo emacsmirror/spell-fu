@@ -5,6 +5,8 @@ Change Log
 
 - In development.
 
+  - ``global-spell-fu-mode`` no longer enables spell-fu for modes derived from ``special-mode``
+    such as package list for example (fixes ``#15``).
   - Support conditionally disabling ``global-spell-fu-mode`` via
     ``global-spell-fu-ignore-buffer`` & ``global-spell-fu-ignore-modes``.
 

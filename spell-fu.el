@@ -300,6 +300,14 @@ Argument POS return faces at this point."
             (push face faces)))))
     faces))
 
+(defun spell-fu--next-faces-prop-change (pos limit)
+  "Return the next face change from POS restricted by LIMIT."
+  (next-single-property-change
+    pos
+    'read-face-name
+    nil
+    (next-single-property-change pos 'face nil limit)))
+
 (defun spell-fu--file-is-older-list (file-test file-list)
   "Return t when FILE-TEST is older than any files in FILE-LIST."
   (catch 'result
@@ -599,25 +607,30 @@ Argument FACES-EXCLUDE faces to check POS excludes or ignored when nil."
           ;; In practice this is likely caused by escape characters, e.g.
           ;; "test\nthe text" where "\n" may have separate highlighting.
           (while (< point-start point-end)
-            (let ((point-end-iter (next-single-property-change point-start 'face nil point-end)))
-              ;; Use narrowing so the regex correctly handles boundaries
-              ;; that happen to fall on face changes.
-              (narrow-to-region point-start point-end-iter)
-              (goto-char point-start)
-              (while (re-search-forward spell-fu-word-regexp point-end-iter t)
-                (let
-                  (
-                    (word-start (match-beginning 0))
-                    (word-end (match-end 0)))
-                  (when
-                    (spell-fu--check-faces-at-point
-                      word-start
-                      spell-fu-faces-include
-                      spell-fu-faces-exclude)
+            (let ((point-end-iter (spell-fu--next-faces-prop-change point-start point-end)))
+              ;; No need to check faces of each word
+              ;; as face-changes are being stepped over.
+              (when
+                (spell-fu--check-faces-at-point
+                  point-start
+                  spell-fu-faces-include
+                  spell-fu-faces-exclude)
+
+                ;; Use narrowing so the regex correctly handles boundaries
+                ;; that happen to fall on face changes.
+                (narrow-to-region point-start point-end-iter)
+                (goto-char point-start)
+                (while (re-search-forward spell-fu-word-regexp point-end-iter t)
+                  (let
+                    (
+                      (word-start (match-beginning 0))
+                      (word-end (match-end 0)))
                     (spell-fu-check-word
                       word-start
                       word-end
-                      (buffer-substring-no-properties word-start word-end)))))
+                      (buffer-substring-no-properties word-start word-end))))
+                (widen))
+
               (setq point-start point-end-iter))))))))
 
 (defun spell-fu--check-range-without-faces (point-start point-end)

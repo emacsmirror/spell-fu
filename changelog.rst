@@ -4,7 +4,10 @@ Change Log
 ##########
 
 - In development.
+  - Changes to the face are now treated as word separators.
 
+    This fixes spell checking in situations where characters are escaped for example ``"test\nterm"``,
+    will use the ``\n`` as a divider when escape characters use a different face.
   - ``global-spell-fu-mode`` no longer enables spell-fu for modes derived from ``special-mode``
     such as package list for example (fixes ``#15``).
   - Support conditionally disabling ``global-spell-fu-mode`` via

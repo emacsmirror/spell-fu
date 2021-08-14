@@ -592,20 +592,33 @@ Argument FACES-EXCLUDE faces to check POS excludes or ignored when nil."
   "Check spelling for POINT-START & POINT-END, checking text matching face rules."
   (spell-fu--remove-overlays point-start point-end)
   (with-syntax-table spell-fu-syntax-table
-    (save-match-data
-      (save-excursion
-        (goto-char point-start)
-        (while (re-search-forward spell-fu-word-regexp point-end t)
-          (let
-            (
-              (word-start (match-beginning 0))
-              (word-end (match-end 0)))
-            (when
-              (spell-fu--check-faces-at-point
-                word-start
-                spell-fu-faces-include
-                spell-fu-faces-exclude)
-              (spell-fu-check-word word-start word-end (match-string-no-properties 0)))))))))
+    (save-match-data ;; For regex search.
+      (save-excursion ;; For moving the point.
+        (save-restriction ;; For narrowing.
+          ;; It's possible the face changes part way through the word.
+          ;; In practice this is likely caused by escape characters, e.g.
+          ;; "test\nthe text" where "\n" may have separate highlighting.
+          (while (< point-start point-end)
+            (let ((point-end-iter (next-single-property-change point-start 'face nil point-end)))
+              ;; Use narrowing so the regex correctly handles boundaries
+              ;; that happen to fall on face changes.
+              (narrow-to-region point-start point-end-iter)
+              (goto-char point-start)
+              (while (re-search-forward spell-fu-word-regexp point-end-iter t)
+                (let
+                  (
+                    (word-start (match-beginning 0))
+                    (word-end (match-end 0)))
+                  (when
+                    (spell-fu--check-faces-at-point
+                      word-start
+                      spell-fu-faces-include
+                      spell-fu-faces-exclude)
+                    (spell-fu-check-word
+                      word-start
+                      word-end
+                      (buffer-substring-no-properties word-start word-end)))))
+              (setq point-start point-end-iter))))))))
 
 (defun spell-fu--check-range-without-faces (point-start point-end)
   "Check spelling for POINT-START & POINT-END, checking all text."

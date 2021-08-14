@@ -578,21 +578,18 @@ Argument POINT-END the end position of WORD."
 ;; to ensure there no chance of the points being in the middle of a word.
 ;;
 
-(defun spell-fu--check-faces-at-point (pos faces-include faces-exclude)
-  "Check if the position POS has faces that match the include/exclude arguments.
-
-Argument FACES-INCLUDE faces to check POS includes or ignored when nil.
-Argument FACES-EXCLUDE faces to check POS excludes or ignored when nil."
+(defun spell-fu--check-faces-at-point (pos)
+  "Check if the position POS has faces that match the include/exclude arguments."
   (let
     (
-      (result (null faces-include))
+      (result (null spell-fu-faces-include))
       (faces-at-pos (spell-fu--faces-at-point pos))
       (face nil))
     (while (setq face (pop faces-at-pos))
-      (when (memq face faces-exclude)
+      (when (memq face spell-fu-faces-exclude)
         (setq faces-at-pos nil)
         (setq result nil))
-      (when (and (null result) (memq face faces-include))
+      (when (and (null result) (memq face spell-fu-faces-include))
         (setq result t)))
     result))
 
@@ -610,12 +607,7 @@ Argument FACES-EXCLUDE faces to check POS excludes or ignored when nil."
             (let ((point-end-iter (spell-fu--next-faces-prop-change point-start point-end)))
               ;; No need to check faces of each word
               ;; as face-changes are being stepped over.
-              (when
-                (spell-fu--check-faces-at-point
-                  point-start
-                  spell-fu-faces-include
-                  spell-fu-faces-exclude)
-
+              (when (spell-fu--check-faces-at-point point-start)
                 ;; Use narrowing so the regex correctly handles boundaries
                 ;; that happen to fall on face changes.
                 (narrow-to-region point-start point-end-iter)

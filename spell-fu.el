@@ -600,30 +600,58 @@ Argument POINT-END the end position of WORD."
     (save-match-data ;; For regex search.
       (save-excursion ;; For moving the point.
         (save-restriction ;; For narrowing.
-          ;; It's possible the face changes part way through the word.
-          ;; In practice this is likely caused by escape characters, e.g.
-          ;; "test\nthe text" where "\n" may have separate highlighting.
-          (while (< point-start point-end)
-            (let ((point-end-iter (spell-fu--next-faces-prop-change point-start point-end)))
-              ;; No need to check faces of each word
-              ;; as face-changes are being stepped over.
-              (when (spell-fu--check-faces-at-point point-start)
-                ;; Use narrowing so the regex correctly handles boundaries
-                ;; that happen to fall on face changes.
-                (narrow-to-region point-start point-end-iter)
-                (goto-char point-start)
-                (while (re-search-forward spell-fu-word-regexp point-end-iter t)
-                  (let
-                    (
-                      (word-start (match-beginning 0))
-                      (word-end (match-end 0)))
-                    (spell-fu-check-word
-                      word-start
-                      word-end
-                      (buffer-substring-no-properties word-start word-end))))
-                (widen))
+          ;; Avoid duplicate calls that check if `point-start' passes the face test.
+          (let ((ok-start (spell-fu--check-faces-at-point point-start)))
+            ;; It's possible the face changes part way through the word.
+            ;; In practice this is likely caused by escape characters, e.g.
+            ;; "test\nthe text" where "\n" may have separate highlighting.
+            (while (< point-start point-end)
+              (let*
+                ( ;; Assign to `ok-start' next iteration to avoid duplicate checks.
+                  (point-end-iter (spell-fu--next-faces-prop-change point-start point-end))
+                  (ok-end-iter
+                    (and
+                      (< point-end-iter point-end)
+                      (spell-fu--check-faces-at-point point-end-iter))))
 
-              (setq point-start point-end-iter))))))))
+                ;; No need to check faces of each word
+                ;; as face-changes are being stepped over.
+                (when ok-start
+
+                  ;; Extend `point-end-iter' out for as long as the face isn't being ignored,
+                  ;; needed when `whitespace-mode' sets a margin,
+                  ;; splitting words in this case isn't desirable, see: #16.
+                  ;;
+                  ;; This may also have some advantage
+                  ;; in reducing the number of narrowing calls.
+                  ;;
+                  ;; NOTE: this could be made into an option.
+                  ;; Currently there doesn't seem much need for this at the moment.
+                  (while ok-end-iter
+                    (setq point-end-iter
+                      (spell-fu--next-faces-prop-change point-end-iter point-end))
+                    (setq ok-end-iter
+                      (and
+                        (< point-end-iter point-end)
+                        (spell-fu--check-faces-at-point point-end-iter))))
+
+                  ;; Use narrowing so the regex correctly handles boundaries
+                  ;; that happen to fall on face changes.
+                  (narrow-to-region point-start point-end-iter)
+                  (goto-char point-start)
+                  (while (re-search-forward spell-fu-word-regexp point-end-iter t)
+                    (let
+                      (
+                        (word-start (match-beginning 0))
+                        (word-end (match-end 0)))
+                      (spell-fu-check-word
+                        word-start
+                        word-end
+                        (buffer-substring-no-properties word-start word-end))))
+                  (widen))
+
+                (setq point-start point-end-iter)
+                (setq ok-start ok-end-iter)))))))))
 
 (defun spell-fu--check-range-without-faces (point-start point-end)
   "Check spelling for POINT-START & POINT-END, checking all text."

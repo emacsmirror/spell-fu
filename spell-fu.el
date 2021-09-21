@@ -196,7 +196,7 @@ Notes:
           (let ((dict-match (and (string-match dict-re dict) (match-string 0 dict))))
             (when dict-match
               (let ((fullpath (concat (file-name-as-directory tmp-path) dict-match ".dat")))
-                (if (file-readable-p fullpath)
+                (when (file-readable-p fullpath)
                   (throw 'datafile fullpath))))))))))
 
 (defun spell-fu--aspell-lang-from-dict (dict)

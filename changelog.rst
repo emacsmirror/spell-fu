@@ -4,6 +4,8 @@ Change Log
 ##########
 
 - In development.
+  - Idle timers now update buffers that have lost focus.
+  - Fix for disabling ``spell-fu-mode`` preventing other buffers that have ``spell-fu-mode`` enabled from updating.
   - Changes to the face are now treated as word separators.
 
     This fixes spell checking in situations where characters are escaped for example ``"test\nterm"``,

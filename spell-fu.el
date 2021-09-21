@@ -702,8 +702,6 @@ Argument POINT-END the end position of WORD."
 ;; ---------------------------------------------------------------------------
 ;; Timer Style (spell-fu-idle-delay over zero)
 
-(defvar spell-fu--idle-timer nil)
-
 (defun spell-fu--idle-remove-overlays (&optional point-start point-end)
   "Remove `spell-fu-pending' overlays from current buffer.
 If optional arguments POINT-START and POINT-END exist remove overlays from
@@ -759,8 +757,7 @@ when checking the entire buffer for example."
 
 (defun spell-fu--idle-handle-pending-ranges ()
   "Spell check the on-screen overlay ranges."
-  (when (bound-and-true-p spell-fu-mode)
-    (spell-fu--idle-handle-pending-ranges-impl (window-start) (window-end))))
+  (spell-fu--idle-handle-pending-ranges-impl (window-start) (window-end)))
 
 (defun spell-fu--idle-font-lock-region-pending (point-start point-end)
   "Track the range to spell check, adding POINT-START & POINT-END to the queue."
@@ -770,17 +767,107 @@ when checking the entire buffer for example."
     (overlay-put item-ov 'spell-fu-pending t)
     (overlay-put item-ov 'evaporate 't)))
 
-(defun spell-fu--idle-timer-enable ()
-  "Add the global idle timer."
-  (unless spell-fu--idle-timer
-    (setq spell-fu--idle-timer
-      (run-with-idle-timer spell-fu-idle-delay t #'spell-fu--idle-handle-pending-ranges))))
+;; ---------------------------------------------------------------------------
+;; Internal Timer Management
+;;
+;; This works as follows:
+;;
+;; - The timer is kept active as long as the local mode is enabled.
+;; - Entering a buffer runs the buffer local `window-state-change-hook'
+;;   immediately which checks if the mode is enabled,
+;;   set up the global timer if it is.
+;; - Switching any other buffer wont run this hook,
+;;   rely on the idle timer it's self running, which detects the active mode,
+;;   canceling it's self if the mode isn't active.
+;;
+;; This is a reliable way of using a global,
+;; repeating idle timer that is effectively buffer local.
+;;
 
-(defun spell-fu--idle-timer-disable ()
-  "Remove the global idle timer."
-  (when spell-fu--idle-timer
-    (cancel-timer spell-fu--idle-timer)
-    (setq spell-fu--idle-timer nil)))
+;; Global idle timer (repeating), keep active while the buffer-local mode is enabled.
+(defvar spell-fu--global-timer nil)
+;; When t, the timer will update buffers in all other visible windows.
+(defvar spell-fu--dirty-flush-all nil)
+;; When true, the buffer should be updated when inactive.
+(defvar-local spell-fu--dirty nil)
+
+(defun spell-fu--time-callback-or-disable ()
+  "Callback that run the repeat timer."
+
+  ;; Ensure all other buffers are highlighted on request.
+  (let ((is-mode-active (bound-and-true-p spell-fu-mode)))
+    ;; When this buffer is not in the mode, flush all other buffers.
+    (cond
+      (is-mode-active
+        ;; Don't update in the window loop to ensure we always
+        ;; update the current buffer in the current context.
+        (setq spell-fu--dirty nil))
+      (t
+        ;; If the timer ran when in another buffer,
+        ;; a previous buffer may need a final refresh, ensure this happens.
+        (setq spell-fu--dirty-flush-all t)))
+
+    (when spell-fu--dirty-flush-all
+      ;; Run the mode callback for all other buffers in the queue.
+      (dolist (frame (frame-list))
+        (dolist (win (window-list frame -1))
+          (let ((buf (window-buffer win)))
+            (when
+              (and
+                (buffer-local-value 'spell-fu-mode buf)
+                (buffer-local-value 'spell-fu--dirty buf))
+              (with-selected-frame frame
+                (with-selected-window win
+                  (with-current-buffer buf
+                    (setq spell-fu--dirty nil)
+                    (spell-fu--idle-handle-pending-ranges)))))))))
+    ;; Always keep the current buffer dirty
+    ;; so navigating away from this buffer will refresh it.
+    (when is-mode-active
+      (setq spell-fu--dirty t))
+
+    (cond
+      (is-mode-active
+        (spell-fu--idle-handle-pending-ranges))
+      (t ;; Cancel the timer until the current buffer uses this mode again.
+        (spell-fu--time-ensure nil)))))
+
+(defun spell-fu--time-ensure (state)
+  "Ensure the timer is enabled when STATE is non-nil, otherwise disable."
+  (cond
+    (state
+      (unless spell-fu--global-timer
+        (setq spell-fu--global-timer
+          (run-with-idle-timer spell-fu-idle-delay :repeat 'spell-fu--time-callback-or-disable))))
+    (t
+      (when spell-fu--global-timer
+        (cancel-timer spell-fu--global-timer)
+        (setq spell-fu--global-timer nil)))))
+
+(defun spell-fu--time-reset ()
+  "Run this when the buffer changes."
+  ;; Ensure changing windows doesn't leave other buffers with stale highlight.
+  (cond
+    ((bound-and-true-p spell-fu-mode)
+      (setq spell-fu--dirty-flush-all t)
+      (setq spell-fu--dirty t)
+      (spell-fu--time-ensure t))
+    (t
+      (spell-fu--time-ensure nil))))
+
+(defun spell-fu--time-buffer-local-enable ()
+  "Ensure buffer local state is enabled."
+  ;; Needed in case focus changes before the idle timer runs.
+  (setq spell-fu--dirty-flush-all t)
+  (setq spell-fu--dirty t)
+  (spell-fu--time-ensure t)
+  (add-hook 'window-state-change-hook #'spell-fu--time-reset nil t))
+
+(defun spell-fu--time-buffer-local-disable ()
+  "Ensure buffer local state is disabled."
+  (kill-local-variable 'spell-fu--dirty)
+  (spell-fu--time-ensure nil)
+  (remove-hook 'window-state-change-hook #'spell-fu--time-reset t))
 
 (defun spell-fu--idle-enable ()
   "Enable the idle style of updating."
@@ -790,15 +877,14 @@ when checking the entire buffer for example."
   ;; running before font-faces have been set.
   (spell-fu--with-add-hook-depth-override 100
     (jit-lock-register #'spell-fu--idle-font-lock-region-pending))
-  (spell-fu--idle-timer-enable))
+  (spell-fu--time-buffer-local-enable))
 
 (defun spell-fu--idle-disable ()
   "Disable the idle style of updating."
   (jit-lock-unregister #'spell-fu--idle-font-lock-region-pending)
   (spell-fu--remove-overlays)
-  (spell-fu--idle-timer-disable)
-  (spell-fu--idle-remove-overlays))
-
+  (spell-fu--idle-remove-overlays)
+  (spell-fu--time-buffer-local-disable))
 
 ;; ---------------------------------------------------------------------------
 ;; Public Functions

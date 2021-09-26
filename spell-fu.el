@@ -86,7 +86,7 @@ Set to 0.0 to highlight immediately (as part of syntax highlighting)."
   :group 'spell-fu)
 
 (defvar-local global-spell-fu-ignore-buffer nil
-  "When non-nil, Global `spell-fu' Mode will not be enabled for this buffer.
+  "When non-nil, the global mode will not be enabled for this buffer.
 This variable can also be a predicate function, in which case
 it'll be called with one parameter (the buffer in question), and
 it should return non-nil to make Global `spell-fu' Mode not

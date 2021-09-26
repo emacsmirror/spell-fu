@@ -43,8 +43,7 @@ Or you may wish to configure this per-mode, e.g:
    (add-hook 'org-mode-hook
      (lambda ()
        (setq spell-fu-faces-exclude
-        '(org-block
-          org-block-begin-line
+        '(org-block-begin-line
           org-block-end-line
           org-code
           org-date

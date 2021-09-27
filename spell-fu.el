@@ -583,14 +583,14 @@ Argument POINT-END the end position of WORD."
   (let
     (
       (result (null spell-fu-faces-include))
-      (faces-at-pos (spell-fu--faces-at-point pos))
-      (face nil))
-    (while (setq face (pop faces-at-pos))
-      (when (memq face spell-fu-faces-exclude)
-        (setq faces-at-pos nil)
-        (setq result nil))
-      (when (and (null result) (memq face spell-fu-faces-include))
-        (setq result t)))
+      (faces-at-pos (spell-fu--faces-at-point pos)))
+    (while faces-at-pos
+      (let ((face (pop faces-at-pos)))
+        (when (memq face spell-fu-faces-exclude)
+          (setq faces-at-pos nil)
+          (setq result nil))
+        (when (and (null result) (memq face spell-fu-faces-include))
+          (setq result t))))
     result))
 
 (defun spell-fu--check-range-with-faces (point-start point-end)

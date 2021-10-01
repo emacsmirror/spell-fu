@@ -464,7 +464,8 @@ save some time by not spending time reading it back."
 (defun spell-fu--cache-words-load-impl (cache-file)
   "Return the Lisp content from reading CACHE-FILE.
 
-On failure of any kind, return nil, the caller will need to regenerate the cache."
+On failure of any kind, return nil,
+the caller will need to regenerate the cache."
   (with-temp-buffer
     (insert-file-contents-literally cache-file)
     (goto-char (point-min))
@@ -547,7 +548,7 @@ range POINT-START to POINT-END. Otherwise remove all overlays."
   (remove-overlays point-start point-end 'spell-fu-mode t))
 
 (defun spell-fu-mark-incorrect (point-start point-end)
-  "Mark the text from POINT-START to POINT-END with the default incorrect spelling overlay."
+  "Mark the text from POINT-START to POINT-END with incorrect spelling overlay."
   (let ((item-ov (make-overlay point-start point-end)))
     (overlay-put item-ov 'spell-fu-mode t)
     (overlay-put item-ov 'face 'spell-fu-incorrect-face)
@@ -579,7 +580,7 @@ Argument POINT-END the end position of WORD."
 ;;
 
 (defun spell-fu--check-faces-at-point (pos)
-  "Check if the position POS has faces that match the include/exclude arguments."
+  "Check if position POS has faces that match include/exclude."
   (let
     (
       (result (null spell-fu-faces-include))
@@ -594,7 +595,9 @@ Argument POINT-END the end position of WORD."
     result))
 
 (defun spell-fu--check-range-with-faces (point-start point-end)
-  "Check spelling for POINT-START & POINT-END, checking text matching face rules."
+  "Check spelling for POINT-START & POINT-END.
+
+This only checks the text matching face rules."
   (spell-fu--remove-overlays point-start point-end)
   (with-syntax-table spell-fu-syntax-table
     (save-match-data ;; For regex search.
@@ -890,7 +893,9 @@ when checking the entire buffer for example."
 ;; Public Functions
 
 (defun spell-fu-region (&optional point-start point-end verbose)
-  "Spell check the region between POINT-START and POINT-END, VERBOSE reports the findings."
+  "Spell check the region between POINT-START and POINT-END.
+
+The VERBOSE argument reports the findings."
   ;; Expand range to line bounds, when set.
   (when (or point-start point-end)
     (unless point-start
@@ -926,7 +931,9 @@ when checking the entire buffer for example."
   (spell-fu-region nil nil t))
 
 (defun spell-fu--goto-next-or-previous-error (dir)
-  "Jump to the next or previous error using DIR, return t when found, otherwise nil."
+  "Jump to the next or previous error using DIR.
+
+Return t when found, otherwise nil."
   (let
     ( ;; Track the closest point in a given line.
       (point-found-delta most-positive-fixnum)

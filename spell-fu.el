@@ -71,19 +71,16 @@
 
 (defcustom spell-fu-directory (locate-user-emacs-file "spell-fu" ".emacs-spell-fu")
   "The directory to store undo data."
-  :group 'spell-fu
   :type 'string)
 
 (defcustom spell-fu-idle-delay 0.25
   "Idle time to wait before highlighting.
 Set to 0.0 to highlight immediately (as part of syntax highlighting)."
-  :group 'spell-fu
   :type 'float)
 
 (defcustom spell-fu-ignore-modes nil
   "List of major-modes to exclude when `spell-fu' has been enabled globally."
-  :type '(repeat symbol)
-  :group 'spell-fu)
+  :type '(repeat symbol))
 
 (defvar-local global-spell-fu-ignore-buffer nil
   "When non-nil, the global mode will not be enabled for this buffer.
@@ -96,8 +93,7 @@ check this buffer.")
   '
   ((((supports :underline (:style wave))) :underline (:style wave :color "red"))
     (t :underline t :inherit error))
-  "Face for incorrect spelling."
-  :group 'spell-fu)
+  "Face for incorrect spelling.")
 
 ;; See '-' as a word boundary \b, so 'full-screen' is detected as two words.
 (defvar-local spell-fu-syntax-table
@@ -1205,7 +1201,6 @@ Return t when the word is removed."
 ;;;###autoload
 (define-minor-mode spell-fu-mode
   "Toggle variable `spell-fu-mode' in the current buffer."
-  :group 'spell-fu
   :global nil
 
   (cond

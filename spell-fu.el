@@ -198,10 +198,10 @@ Notes:
 (defun spell-fu--aspell-lang-from-dict (dict)
   "Return the language of a DICT or nil if identification fails.
 
-Supports aspell alias dictionaries, e.g. 'german' or 'deutsch'
-for 'de_DE' using Ispell's lookup routines. The language is
-identified by looking for the data file associated with the
-dictionary."
+Supports aspell alias dictionaries, e.g. 'german' or 'deutsch',
+for 'de_DE' using Ispell's lookup routines.
+The language is identified by looking for the data file
+associated with the dictionary."
   (unless ispell-aspell-dictionary-alist
     (ispell-find-aspell-dictionaries))
   (let ((dict-name (cadr (nth 5 (assoc dict ispell-aspell-dictionary-alist)))))
@@ -539,8 +539,9 @@ the caller will need to regenerate the cache."
 
 (defun spell-fu--remove-overlays (&optional point-start point-end)
   "Remove symbol `spell-fu-mode' overlays from current buffer.
-If optional arguments POINT-START and POINT-END exist remove overlays from
-range POINT-START to POINT-END. Otherwise remove all overlays."
+If optional arguments POINT-START and POINT-END exist
+remove overlays from range POINT-START to POINT-END.
+Otherwise remove all overlays."
   (remove-overlays point-start point-end 'spell-fu-mode t))
 
 (defun spell-fu-mark-incorrect (point-start point-end)
@@ -703,8 +704,9 @@ This only checks the text matching face rules."
 
 (defun spell-fu--idle-remove-overlays (&optional point-start point-end)
   "Remove `spell-fu-pending' overlays from current buffer.
-If optional arguments POINT-START and POINT-END exist remove overlays from
-range POINT-START to POINT-END. Otherwise remove all overlays."
+If optional arguments POINT-START and POINT-END exist
+remove overlays from range POINT-START to POINT-END.
+Otherwise remove all overlays."
   (remove-overlays point-start point-end 'spell-fu-pending t))
 
 (defun spell-fu--idle-handle-pending-ranges-impl (visible-start visible-end)
@@ -844,7 +846,7 @@ when checking the entire buffer for example."
         (setq spell-fu--global-timer nil)))))
 
 (defun spell-fu--time-reset ()
-  "Run this when the buffer changes."
+  "Run this when the buffer was changed."
   ;; Ensure changing windows doesn't leave other buffers with stale highlight.
   (cond
     ((bound-and-true-p spell-fu-mode)

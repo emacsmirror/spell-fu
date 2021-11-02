@@ -113,7 +113,9 @@ check this buffer.")
 ;; - don't''join <= don't connect multiple apostrophes.
 ;;   ^^^^^  ^^^^
 ;;
-(defvar-local spell-fu-word-regexp "\\b\\([[:alpha:]][[:alpha:]]*\\('[[:alpha:]]*\\)?\\)\\b"
+;; - word' <= don't count the final apostrophe.
+;;   ^^^^
+(defvar-local spell-fu-word-regexp "\\b\\([[:alpha:]]+\\(['\u2019][[:alpha:]]+\\)?\\)\\b"
   "Regex used to scan for words to check (used by `spell-fu-check-range').")
 
 (defvar-local spell-fu-faces-include nil

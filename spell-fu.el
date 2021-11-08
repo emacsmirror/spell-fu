@@ -939,6 +939,10 @@ The VERBOSE argument reports the findings."
   "Jump to the next or previous error using DIR.
 
 Return t when found, otherwise nil."
+
+  (unless (bound-and-true-p spell-fu-mode)
+    (user-error "Spell-fu: enable `spell-fu-mode' before using this command!"))
+
   (let
     ( ;; Track the closest point in a given line.
       (point-found-delta most-positive-fixnum)

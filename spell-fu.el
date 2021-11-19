@@ -153,6 +153,11 @@ Notes:
 ;; Note that this is typically the same dictionary shared across all buffers.
 (defvar-local spell-fu--cache-table nil)
 
+;; Keep track of the last overlay, this allows expanding the existing overlay where possible.
+;; Useful since font-locking often uses multiple smaller ranges which can be merged into one range.
+;; Always check this has not been deleted (has a valid buffer) before use.
+(defvar-local spell-fu--idle-overlay-last nil)
+
 
 ;; ---------------------------------------------------------------------------
 ;; Dictionary Utility Functions
@@ -768,11 +773,31 @@ when checking the entire buffer for example."
 
 (defun spell-fu--idle-font-lock-region-pending (point-start point-end)
   "Track the range to spell check, adding POINT-START & POINT-END to the queue."
-  (let ((item-ov (make-overlay point-start point-end)))
-    ;; Handy for debugging pending regions to be checked.
-    ;; (overlay-put item-ov 'face '(:background "#000000" :extend t))
-    (overlay-put item-ov 'spell-fu-pending t)
-    (overlay-put item-ov 'evaporate 't)))
+  (when (and spell-fu--idle-overlay-last (not (overlay-buffer spell-fu--idle-overlay-last)))
+    (setq spell-fu--idle-overlay-last nil))
+
+  (cond
+    ;; Extend forwards.
+    ((and spell-fu--idle-overlay-last (eq point-start (overlay-end spell-fu--idle-overlay-last)))
+      (move-overlay
+        spell-fu--idle-overlay-last
+        (overlay-start spell-fu--idle-overlay-last)
+        point-end))
+    ;; Extend backwards.
+    ((and spell-fu--idle-overlay-last (eq point-end (overlay-start spell-fu--idle-overlay-last)))
+      (move-overlay
+        spell-fu--idle-overlay-last
+        point-start
+        (overlay-end spell-fu--idle-overlay-last)))
+    (t
+      (let ((item-ov (make-overlay point-start point-end)))
+        ;; Handy for debugging pending regions to be checked.
+        ;; (overlay-put item-ov 'face '(:background "#000000" :extend t))
+
+        (overlay-put item-ov 'spell-fu-pending t)
+        (overlay-put item-ov 'evaporate 't)
+
+        (setq spell-fu--idle-overlay-last item-ov)))))
 
 ;; ---------------------------------------------------------------------------
 ;; Internal Timer Management
@@ -891,7 +916,8 @@ when checking the entire buffer for example."
   (jit-lock-unregister #'spell-fu--idle-font-lock-region-pending)
   (spell-fu--overlays-remove)
   (spell-fu--idle-overlays-remove)
-  (spell-fu--time-buffer-local-disable))
+  (spell-fu--time-buffer-local-disable)
+  (kill-local-variable 'spell-fu--idle-overlay-last))
 
 ;; ---------------------------------------------------------------------------
 ;; Public Functions

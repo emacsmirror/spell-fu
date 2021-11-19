@@ -541,7 +541,7 @@ the caller will need to regenerate the cache."
 ;; ---------------------------------------------------------------------------
 ;; Shared Functions
 
-(defun spell-fu--remove-overlays (&optional point-start point-end)
+(defun spell-fu--overlays-remove (&optional point-start point-end)
   "Remove symbol `spell-fu-mode' overlays from current buffer.
 If optional arguments POINT-START and POINT-END exist
 remove overlays from range POINT-START to POINT-END.
@@ -599,7 +599,7 @@ Argument POINT-END the end position of WORD."
   "Check spelling for POINT-START & POINT-END.
 
 This only checks the text matching face rules."
-  (spell-fu--remove-overlays point-start point-end)
+  (spell-fu--overlays-remove point-start point-end)
   (with-syntax-table spell-fu-syntax-table
     (save-match-data ;; For regex search.
       (save-excursion ;; For moving the point.
@@ -659,7 +659,7 @@ This only checks the text matching face rules."
 
 (defun spell-fu--check-range-without-faces (point-start point-end)
   "Check spelling for POINT-START & POINT-END, checking all text."
-  (spell-fu--remove-overlays point-start point-end)
+  (spell-fu--overlays-remove point-start point-end)
   (with-syntax-table spell-fu-syntax-table
     (save-match-data
       (save-excursion
@@ -702,13 +702,13 @@ This only checks the text matching face rules."
 (defun spell-fu--immediate-disable ()
   "Disable immediate spell checking."
   (jit-lock-unregister #'spell-fu--font-lock-fontify-region)
-  (spell-fu--remove-overlays))
+  (spell-fu--overlays-remove))
 
 
 ;; ---------------------------------------------------------------------------
 ;; Timer Style (spell-fu-idle-delay over zero)
 
-(defun spell-fu--idle-remove-overlays (&optional point-start point-end)
+(defun spell-fu--idle-overlays-remove (&optional point-start point-end)
   "Remove `spell-fu-pending' overlays from current buffer.
 If optional arguments POINT-START and POINT-END exist
 remove overlays from range POINT-START to POINT-END.
@@ -760,7 +760,7 @@ when checking the entire buffer for example."
               ;; avoid this because it's possible `spell-fu-check-range' is interrupted.
               ;; Allowing interrupting is important, so users may set this to a slower function
               ;; which doesn't lock up Emacs as this is run from an idle timer.
-              (spell-fu--idle-remove-overlays point-start point-end))))))))
+              (spell-fu--idle-overlays-remove point-start point-end))))))))
 
 (defun spell-fu--idle-handle-pending-ranges ()
   "Spell check the on-screen overlay ranges."
@@ -889,8 +889,8 @@ when checking the entire buffer for example."
 (defun spell-fu--idle-disable ()
   "Disable the idle style of updating."
   (jit-lock-unregister #'spell-fu--idle-font-lock-region-pending)
-  (spell-fu--remove-overlays)
-  (spell-fu--idle-remove-overlays)
+  (spell-fu--overlays-remove)
+  (spell-fu--idle-overlays-remove)
   (spell-fu--time-buffer-local-disable))
 
 ;; ---------------------------------------------------------------------------
@@ -1021,8 +1021,8 @@ Return t when found, otherwise nil."
         (when (eq cache-table (bound-and-true-p spell-fu--cache-table))
           ;; For now simply clear syntax highlighting.
           (unless (<= spell-fu-idle-delay 0.0)
-            (spell-fu--idle-remove-overlays))
-          (spell-fu--remove-overlays)
+            (spell-fu--idle-overlays-remove))
+          (spell-fu--overlays-remove)
           (font-lock-flush))))))
 
 (defun spell-fu--word-add-or-remove (word words-file action)

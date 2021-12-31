@@ -70,7 +70,7 @@
   :group 'ispell)
 
 (defcustom spell-fu-directory (locate-user-emacs-file "spell-fu" ".emacs-spell-fu")
-  "The directory to store undo data."
+  "The directory to store dictionary data."
   :type 'string)
 
 (defcustom spell-fu-idle-delay 0.25

@@ -149,9 +149,9 @@ Notes:
 ;; List of language, dictionary mappings.
 (defvar spell-fu--cache-table-alist nil)
 
-;; Buffer local dictionary.
-;; Note that this is typically the same dictionary shared across all buffers.
-(defvar-local spell-fu--cache-table nil)
+;; Buffer local dictionaries.
+;; Note that these are typically the same dictionaries shared across all buffers.
+(defvar-local spell-fu--cache-tables nil)
 
 ;; Keep track of the last overlay, this allows expanding the existing overlay where possible.
 ;; Useful since font-locking often uses multiple smaller ranges which can be merged into one range.
@@ -162,9 +162,9 @@ Notes:
 ;; ---------------------------------------------------------------------------
 ;; Dictionary Utility Functions
 
-(defun spell-fu--dictionary ()
-  "Access the current dictionary."
-  (or ispell-local-dictionary ispell-dictionary "default"))
+(defun spell-fu--dictionaries ()
+  "Access the current dictionaries."
+  (list (or ispell-local-dictionary ispell-dictionary "default")))
 
 (defun spell-fu--cache-file (dict)
   "Return the location of the cache file with dictionary DICT."
@@ -507,40 +507,47 @@ the caller will need to regenerate the cache."
 ;;
 ;; Top level function, called when enabling the mode.
 
-(defun spell-fu--ensure-dict (dict)
-  "Setup the dictionary, initializing new files as necessary with dictionary DICT."
+(defun spell-fu--ensure-dicts (dicts)
+  "Setup the dictionaries, initializing them as necessary with dictionaries DICTS."
 
-  ;; First use the dictionary if it's in memory.
-  ;; Once Emacs is running, this is used for all new buffers.
-  (setq spell-fu--cache-table (assoc-default dict spell-fu--cache-table-alist))
+  (setq spell-fu--cache-tables
+    (mapcar
+      (lambda (dict)
 
-  ;; Not loaded yet, initialize it.
-  (unless spell-fu--cache-table
+        ;; First use the dictionary if it's in memory.
+        ;; Once Emacs is running, this is used for all new buffers.
+        (let ((cache-table (assoc-default dict spell-fu--cache-table-alist)))
 
-    ;; Ensure our path exists.
-    (unless (file-directory-p spell-fu-directory)
-      (make-directory spell-fu-directory))
+          ;; Not loaded yet, initialize it.
+          (unless cache-table
 
-    (let
-      ( ;; Get the paths of both files, ensure the cache file is newer,
-        ;; otherwise regenerate it.
-        (words-file (spell-fu--words-file dict))
-        (cache-file (spell-fu--cache-file dict)))
+            ;; Ensure our path exists.
+            (unless (file-directory-p spell-fu-directory)
+              (make-directory spell-fu-directory))
 
-      (spell-fu--word-list-ensure words-file dict)
+            (let
+              ( ;; Get the paths of both files, ensure the cache file is newer,
+                ;; otherwise regenerate it.
+                (words-file (spell-fu--words-file dict))
+                (cache-file (spell-fu--cache-file dict)))
 
-      ;; Load cache or create it, creating it returns the cache
-      ;; to avoid some slow-down on first load.
-      (setq spell-fu--cache-table
-        (or
-          (and
-            (file-exists-p cache-file)
-            (not (spell-fu--file-is-older cache-file words-file))
-            (spell-fu--cache-words-load cache-file))
-          (spell-fu--cache-from-word-list words-file cache-file)))
+              (spell-fu--word-list-ensure words-file dict)
 
-      ;; Add to to `spell-fu--cache-table-alist' for reuse on next load.
-      (push (cons dict spell-fu--cache-table) spell-fu--cache-table-alist))))
+              ;; Load cache or create it, creating it returns the cache
+              ;; to avoid some slow-down on first load.
+              (setq cache-table
+                (or
+                  (and
+                    (file-exists-p cache-file)
+                    (not (spell-fu--file-is-older cache-file words-file))
+                    (spell-fu--cache-words-load cache-file))
+                  (spell-fu--cache-from-word-list words-file cache-file)))
+
+              ;; Add to to `spell-fu--cache-table-alist' for reuse on next load.
+              (push (cons dict cache-table) spell-fu--cache-table-alist)))
+
+          cache-table))
+      dicts)))
 
 
 ;; ---------------------------------------------------------------------------
@@ -570,10 +577,14 @@ Otherwise remove all overlays."
 Marking the spelling as incorrect using `spell-fu-incorrect-face' on failure.
 Argument POINT-START the beginning position of WORD.
 Argument POINT-END the end position of WORD."
-  (unless (gethash (encode-coding-string (downcase word) 'utf-8) spell-fu--cache-table nil)
+  (or
+    ;; Dictionary search.
+    (let ((encoded-word (encode-coding-string (downcase word) 'utf-8)))
+      (cl-find-if (lambda (table) (gethash encoded-word table nil)) spell-fu--cache-tables))
     ;; Ignore all uppercase words.
-    (unless (equal word (upcase word))
-      (spell-fu-mark-incorrect pos-beg pos-end))))
+    (equal word (upcase word))
+    ;; Mark as incorrect otherwise.
+    (spell-fu-mark-incorrect pos-beg pos-end)))
 
 
 ;; ---------------------------------------------------------------------------
@@ -1039,13 +1050,14 @@ Return t when found, otherwise nil."
   "Reset spell-checked overlays for buffers using the dictionary from CACHE-TABLE."
   (dolist (buf (buffer-list))
     (with-current-buffer buf
-      (when (bound-and-true-p spell-fu-mode)
-        (when (eq cache-table (bound-and-true-p spell-fu--cache-table))
-          ;; For now simply clear syntax highlighting.
-          (unless (<= spell-fu-idle-delay 0.0)
-            (spell-fu--idle-overlays-remove))
-          (spell-fu--overlays-remove)
-          (font-lock-flush))))))
+      (when (and (bound-and-true-p spell-fu-mode) (bound-and-true-p spell-fu--cache-tables))
+        (dolist (table spell-fu--cache-tables)
+          (when (eq cache-table table)
+            ;; For now simply clear syntax highlighting.
+            (unless (<= spell-fu-idle-delay 0.0)
+              (spell-fu--idle-overlays-remove))
+            (spell-fu--overlays-remove)
+            (font-lock-flush)))))))
 
 (defun spell-fu--word-add-or-remove (word words-file action)
   "Apply ACTION to WORD from the personal dictionary WORDS-FILE.
@@ -1060,7 +1072,7 @@ Return t when the action succeeded."
         (message "personal dictionary not defined!")
         (throw 'result nil))
 
-      (let ((this-cache-table spell-fu--cache-table))
+      (let ((this-cache-table (car spell-fu--cache-tables)))
         (with-temp-buffer
           (insert-file-contents-literally words-file)
 
@@ -1212,7 +1224,7 @@ Return t when the word is removed."
 
 (defun spell-fu-mode-enable ()
   "Turn on option `spell-fu-mode' for the current buffer."
-  (spell-fu--ensure-dict (spell-fu--dictionary))
+  (spell-fu--ensure-dicts (spell-fu--dictionaries))
 
   ;; We may want defaults for other modes,
   ;; although keep this general.

@@ -174,48 +174,18 @@ Notes:
   "Return the location of the word-list with dictionary DICT."
   (expand-file-name (format "words_%s.txt" dict) spell-fu-directory))
 
-(defun spell-fu--aspell-find-data-file (dict)
-  "For Aspell dictionary DICT, return an associated data file path or nil."
-  ;; Based on `ispell-aspell-find-dictionary'.
-
-  ;; Make sure `ispell-aspell-dict-dir' is defined.
-  (unless ispell-aspell-dict-dir
-    (setq ispell-aspell-dict-dir (ispell-get-aspell-config-value "dict-dir")))
-
-  ;; Make sure `ispell-aspell-data-dir' is defined.
-  (unless ispell-aspell-data-dir
-    (setq ispell-aspell-data-dir (ispell-get-aspell-config-value "data-dir")))
-
-  ;; Try finding associated data-file. aspell will look for master .dat
-  ;; file in `dict-dir' and `data-dir'. Associated .dat files must be
-  ;; in the same directory as master file.
-  (catch 'datafile
-    (save-match-data
-      (dolist (tmp-path (list ispell-aspell-dict-dir ispell-aspell-data-dir))
-        ;; Try `xx.dat' first, strip out variant, country code, etc,
-        ;; then try `xx_YY.dat' (without stripping country code),
-        ;; then try `xx-alt.dat', for `de-alt' etc.
-        (dolist (dict-re (list "^[[:alpha:]]+" "^[[:alpha:]_]+" "^[[:alpha:]]+-\\(alt\\|old\\)"))
-          (let ((dict-match (and (string-match dict-re dict) (match-string 0 dict))))
-            (when dict-match
-              (let ((fullpath (concat (file-name-as-directory tmp-path) dict-match ".dat")))
-                (when (file-readable-p fullpath)
-                  (throw 'datafile fullpath))))))))))
-
-(defun spell-fu--aspell-lang-from-dict (dict)
-  "Return the language of a DICT or nil if identification fails.
-
-Supports aspell alias dictionaries, e.g. 'german' or 'deutsch',
-for 'de_DE' using Ispell's lookup routines.
-The language is identified by looking for the data file
-associated with the dictionary."
-  (unless ispell-aspell-dictionary-alist
-    (ispell-find-aspell-dictionaries))
-  (let ((dict-name (cadr (nth 5 (assoc dict ispell-aspell-dictionary-alist)))))
-    (when dict-name
-      (let ((data-file (spell-fu--aspell-find-data-file dict-name)))
-        (when data-file
-          (file-name-base data-file))))))
+(defun spell-fu--buffers-refresh-with-cache-table (cache-table)
+  "Reset spell-checked overlays for buffers using the dictionary from CACHE-TABLE."
+  (dolist (buf (buffer-list))
+    (with-current-buffer buf
+      (when (and (bound-and-true-p spell-fu-mode) (bound-and-true-p spell-fu--cache-tables))
+        (dolist (table spell-fu--cache-tables)
+          (when (eq cache-table table)
+            ;; For now simply clear syntax highlighting.
+            (unless (<= spell-fu-idle-delay 0.0)
+              (spell-fu--idle-overlays-remove))
+            (spell-fu--overlays-remove)
+            (font-lock-flush)))))))
 
 
 ;; ---------------------------------------------------------------------------
@@ -329,100 +299,6 @@ Argument POS return faces at this point."
 
 
 ;; ---------------------------------------------------------------------------
-;; Word List Generation
-
-(defun spell-fu--word-list-ensure (words-file dict)
-  "Ensure the word list is generated with dictionary DICT.
-Argument WORDS-FILE the file to write the word list into."
-  (let*
-    (
-      (personal-words-file ispell-personal-dictionary)
-      (has-words-file (file-exists-p words-file))
-      (has-dict-personal (and personal-words-file (file-exists-p personal-words-file)))
-      (is-dict-outdated
-        (and
-          has-words-file
-          has-dict-personal
-          (spell-fu--file-is-older words-file personal-words-file))))
-
-    (when (or (not has-words-file) is-dict-outdated)
-
-      (spell-fu--with-message-prefix "Spell-fu generating words: "
-        (message "%S" (file-name-nondirectory words-file))
-
-        ;; Build a word list, sorted case insensitive.
-        (let ((word-list nil))
-
-          ;; Optional: insert personal dictionary, stripping header and inserting a newline.
-          (with-temp-buffer
-            (when has-dict-personal
-              (insert-file-contents personal-words-file)
-              (goto-char (point-min))
-              (when (looking-at "personal_ws-")
-                (delete-region (line-beginning-position) (1+ (line-end-position))))
-              (goto-char (point-max))
-              (unless (eq ?\n (char-after))
-                (insert "\n")))
-
-            (setq word-list (spell-fu--buffer-as-line-list (current-buffer) word-list)))
-
-          ;; Insert dictionary from aspell.
-          (with-temp-buffer
-            (let
-              ( ;; Use the pre-configured aspell binary, or call aspell directly.
-                (aspell-bin
-                  (or (and ispell-really-aspell ispell-program-name) (executable-find "aspell"))))
-
-              (cond
-                ((string-equal dict "default")
-                  (call-process aspell-bin nil t nil "dump" "master"))
-                (t
-                  (call-process aspell-bin nil t nil "-d" dict "dump" "master")))
-
-              ;; Check whether the dictionary has affixes, expand if necessary.
-              (when (re-search-backward "^[[:alpha:]]*/[[:alnum:]]*$" nil t)
-                (let ((lang (spell-fu--aspell-lang-from-dict dict)))
-                  (unless
-                    (zerop
-                      (shell-command-on-region
-                        (point-min) (point-max)
-                        (cond
-                          (lang
-                            (format "%s -l %s expand" aspell-bin lang))
-                          (t
-                            (format "%s expand" aspell-bin)))
-                        t t
-                        ;; Output any errors into the message buffer instead of the word-list.
-                        "*spell-fu word generation errors*"))
-                    (message
-                      (format
-                        "spell-fu: affix extension for dictionary '%s' failed (with language: %S)."
-                        dict
-                        lang)))
-                  (goto-char (point-min))
-                  (while (search-forward " " nil t)
-                    (replace-match "\n")))))
-
-            (setq word-list (spell-fu--buffer-as-line-list (current-buffer) word-list)))
-
-          ;; Case insensitive sort is important if this is used for `ispell-complete-word-dict'.
-          ;; Which is a handy double-use for this file.
-          (let ((word-list-ncase nil))
-            (dolist (word word-list)
-              (push (cons (downcase word) word) word-list-ncase))
-
-            ;; Sort by the lowercase word.
-            (setq word-list-ncase
-              (sort word-list-ncase (lambda (a b) (string-lessp (car a) (car b)))))
-
-            ;; Write to 'words-file'.
-            (with-temp-buffer
-              (dolist (line-cons word-list-ncase)
-                (insert (cdr line-cons) "\n"))
-              (write-region nil nil words-file nil 0))))))))
-
-
-;; ---------------------------------------------------------------------------
 ;; Word List Cache
 
 (defun spell-fu--cache-from-word-list-impl (words-file cache-file)
@@ -503,54 +379,6 @@ the caller will need to regenerate the cache."
 
 
 ;; ---------------------------------------------------------------------------
-;; Word List Initialization
-;;
-;; Top level function, called when enabling the mode.
-
-(defun spell-fu--ensure-dicts (dicts)
-  "Setup the dictionaries, initializing them as necessary with dictionaries DICTS."
-
-  (setq spell-fu--cache-tables
-    (mapcar
-      (lambda (dict)
-
-        ;; First use the dictionary if it's in memory.
-        ;; Once Emacs is running, this is used for all new buffers.
-        (let ((cache-table (assoc-default dict spell-fu--cache-table-alist)))
-
-          ;; Not loaded yet, initialize it.
-          (unless cache-table
-
-            ;; Ensure our path exists.
-            (unless (file-directory-p spell-fu-directory)
-              (make-directory spell-fu-directory))
-
-            (let
-              ( ;; Get the paths of both files, ensure the cache file is newer,
-                ;; otherwise regenerate it.
-                (words-file (spell-fu--words-file dict))
-                (cache-file (spell-fu--cache-file dict)))
-
-              (spell-fu--word-list-ensure words-file dict)
-
-              ;; Load cache or create it, creating it returns the cache
-              ;; to avoid some slow-down on first load.
-              (setq cache-table
-                (or
-                  (and
-                    (file-exists-p cache-file)
-                    (not (spell-fu--file-is-older cache-file words-file))
-                    (spell-fu--cache-words-load cache-file))
-                  (spell-fu--cache-from-word-list words-file cache-file)))
-
-              ;; Add to to `spell-fu--cache-table-alist' for reuse on next load.
-              (push (cons dict cache-table) spell-fu--cache-table-alist)))
-
-          cache-table))
-      dicts)))
-
-
-;; ---------------------------------------------------------------------------
 ;; Shared Functions
 
 (defun spell-fu--overlays-remove (&optional pos-beg pos-end)
@@ -585,6 +413,23 @@ Argument POINT-END the end position of WORD."
     (equal word (upcase word))
     ;; Mark as incorrect otherwise.
     (spell-fu-mark-incorrect pos-beg pos-end)))
+
+(defun spell-fu--word-at-point ()
+  "Return the word at the current point or nil."
+  (let
+    (
+      (point-init (point))
+      (pos-beg (line-beginning-position))
+      (pos-end (line-end-position)))
+    (save-excursion
+      (goto-char pos-beg)
+      (catch 'result
+        (with-syntax-table spell-fu-syntax-table
+          (save-match-data
+            (while (re-search-forward spell-fu-word-regexp pos-end t)
+              (when (and (<= (match-beginning 0) point-init) (<= point-init (match-end 0)))
+                (throw 'result (match-string-no-properties 0))))))
+        (throw 'result nil)))))
 
 
 ;; ---------------------------------------------------------------------------
@@ -1041,23 +886,212 @@ Return t when found, otherwise nil."
   (interactive)
   (spell-fu--goto-next-or-previous-error -1))
 
+(defun spell-fu-word-add ()
+  "Add the current word to the personal dictionary.
+
+Return t when the word has been added."
+  (interactive)
+  (spell-fu--word-add-or-remove (spell-fu--word-at-point) ispell-personal-dictionary 'add))
+
+(defun spell-fu-word-remove ()
+  "Remove the current word from the personal dictionary.
+
+Return t when the word is removed."
+  (interactive)
+  (spell-fu--word-add-or-remove (spell-fu--word-at-point) ispell-personal-dictionary 'remove))
+
+
+;; ---------------------------------------------------------------------------
+;; Ispell / Aspell dictionary support
+;;
+
+;; Word List Generation
+
+(defun spell-fu--word-list-ensure (words-file dict)
+  "Ensure the word list is generated with dictionary DICT.
+Argument WORDS-FILE the file to write the word list into."
+  (let*
+    (
+      (personal-words-file ispell-personal-dictionary)
+      (has-words-file (file-exists-p words-file))
+      (has-dict-personal (and personal-words-file (file-exists-p personal-words-file)))
+      (is-dict-outdated
+        (and
+          has-words-file
+          has-dict-personal
+          (spell-fu--file-is-older words-file personal-words-file))))
+
+    (when (or (not has-words-file) is-dict-outdated)
+
+      (spell-fu--with-message-prefix "Spell-fu generating words: "
+        (message "%S" (file-name-nondirectory words-file))
+
+        ;; Build a word list, sorted case insensitive.
+        (let ((word-list nil))
+
+          ;; Optional: insert personal dictionary, stripping header and inserting a newline.
+          (with-temp-buffer
+            (when has-dict-personal
+              (insert-file-contents personal-words-file)
+              (goto-char (point-min))
+              (when (looking-at "personal_ws-")
+                (delete-region (line-beginning-position) (1+ (line-end-position))))
+              (goto-char (point-max))
+              (unless (eq ?\n (char-after))
+                (insert "\n")))
+
+            (setq word-list (spell-fu--buffer-as-line-list (current-buffer) word-list)))
+
+          ;; Insert dictionary from aspell.
+          (with-temp-buffer
+            (let
+              ( ;; Use the pre-configured aspell binary, or call aspell directly.
+                (aspell-bin
+                  (or (and ispell-really-aspell ispell-program-name) (executable-find "aspell"))))
+
+              (cond
+                ((string-equal dict "default")
+                  (call-process aspell-bin nil t nil "dump" "master"))
+                (t
+                  (call-process aspell-bin nil t nil "-d" dict "dump" "master")))
+
+              ;; Check whether the dictionary has affixes, expand if necessary.
+              (when (re-search-backward "^[[:alpha:]]*/[[:alnum:]]*$" nil t)
+                (let ((lang (spell-fu--aspell-lang-from-dict dict)))
+                  (unless
+                    (zerop
+                      (shell-command-on-region
+                        (point-min) (point-max)
+                        (cond
+                          (lang
+                            (format "%s -l %s expand" aspell-bin lang))
+                          (t
+                            (format "%s expand" aspell-bin)))
+                        t t
+                        ;; Output any errors into the message buffer instead of the word-list.
+                        "*spell-fu word generation errors*"))
+                    (message
+                      (format
+                        "spell-fu: affix extension for dictionary '%s' failed (with language: %S)."
+                        dict
+                        lang)))
+                  (goto-char (point-min))
+                  (while (search-forward " " nil t)
+                    (replace-match "\n")))))
+
+            (setq word-list (spell-fu--buffer-as-line-list (current-buffer) word-list)))
+
+          ;; Case insensitive sort is important if this is used for `ispell-complete-word-dict'.
+          ;; Which is a handy double-use for this file.
+          (let ((word-list-ncase nil))
+            (dolist (word word-list)
+              (push (cons (downcase word) word) word-list-ncase))
+
+            ;; Sort by the lowercase word.
+            (setq word-list-ncase
+              (sort word-list-ncase (lambda (a b) (string-lessp (car a) (car b)))))
+
+            ;; Write to 'words-file'.
+            (with-temp-buffer
+              (dolist (line-cons word-list-ncase)
+                (insert (cdr line-cons) "\n"))
+              (write-region nil nil words-file nil 0))))))))
+
+
+;; Word List Initialization
+;;
+;; Top level function, called when enabling the mode.
+
+(defun spell-fu--ensure-dicts (dicts)
+  "Setup the dictionaries, initializing them as necessary with dictionaries DICTS."
+
+  (setq spell-fu--cache-tables
+    (mapcar
+      (lambda (dict)
+
+        ;; First use the dictionary if it's in memory.
+        ;; Once Emacs is running, this is used for all new buffers.
+        (let ((cache-table (assoc-default dict spell-fu--cache-table-alist)))
+
+          ;; Not loaded yet, initialize it.
+          (unless cache-table
+
+            ;; Ensure our path exists.
+            (unless (file-directory-p spell-fu-directory)
+              (make-directory spell-fu-directory))
+
+            (let
+              ( ;; Get the paths of both files, ensure the cache file is newer,
+                ;; otherwise regenerate it.
+                (words-file (spell-fu--words-file dict))
+                (cache-file (spell-fu--cache-file dict)))
+
+              (spell-fu--word-list-ensure words-file dict)
+
+              ;; Load cache or create it, creating it returns the cache
+              ;; to avoid some slow-down on first load.
+              (setq cache-table
+                (or
+                  (and
+                    (file-exists-p cache-file)
+                    (not (spell-fu--file-is-older cache-file words-file))
+                    (spell-fu--cache-words-load cache-file))
+                  (spell-fu--cache-from-word-list words-file cache-file)))
+
+              ;; Add to to `spell-fu--cache-table-alist' for reuse on next load.
+              (push (cons dict cache-table) spell-fu--cache-table-alist)))
+
+          cache-table))
+      dicts)))
+
+
+(defun spell-fu--aspell-find-data-file (dict)
+  "For Aspell dictionary DICT, return an associated data file path or nil."
+  ;; Based on `ispell-aspell-find-dictionary'.
+
+  ;; Make sure `ispell-aspell-dict-dir' is defined.
+  (unless ispell-aspell-dict-dir
+    (setq ispell-aspell-dict-dir (ispell-get-aspell-config-value "dict-dir")))
+
+  ;; Make sure `ispell-aspell-data-dir' is defined.
+  (unless ispell-aspell-data-dir
+    (setq ispell-aspell-data-dir (ispell-get-aspell-config-value "data-dir")))
+
+  ;; Try finding associated data-file. aspell will look for master .dat
+  ;; file in `dict-dir' and `data-dir'. Associated .dat files must be
+  ;; in the same directory as master file.
+  (catch 'datafile
+    (save-match-data
+      (dolist (tmp-path (list ispell-aspell-dict-dir ispell-aspell-data-dir))
+        ;; Try `xx.dat' first, strip out variant, country code, etc,
+        ;; then try `xx_YY.dat' (without stripping country code),
+        ;; then try `xx-alt.dat', for `de-alt' etc.
+        (dolist (dict-re (list "^[[:alpha:]]+" "^[[:alpha:]_]+" "^[[:alpha:]]+-\\(alt\\|old\\)"))
+          (let ((dict-match (and (string-match dict-re dict) (match-string 0 dict))))
+            (when dict-match
+              (let ((fullpath (concat (file-name-as-directory tmp-path) dict-match ".dat")))
+                (when (file-readable-p fullpath)
+                  (throw 'datafile fullpath))))))))))
+
+(defun spell-fu--aspell-lang-from-dict (dict)
+  "Return the language of a DICT or nil if identification fails.
+
+Supports aspell alias dictionaries, e.g. 'german' or 'deutsch',
+for 'de_DE' using Ispell's lookup routines.
+The language is identified by looking for the data file
+associated with the dictionary."
+  (unless ispell-aspell-dictionary-alist
+    (ispell-find-aspell-dictionaries))
+  (let ((dict-name (cadr (nth 5 (assoc dict ispell-aspell-dictionary-alist)))))
+    (when dict-name
+      (let ((data-file (spell-fu--aspell-find-data-file dict-name)))
+        (when data-file
+          (file-name-base data-file))))))
+
 
 ;; ---------------------------------------------------------------------------
 ;; Personal Dictionary Management
 ;;
-
-(defun spell-fu--buffers-refresh-with-cache-table (cache-table)
-  "Reset spell-checked overlays for buffers using the dictionary from CACHE-TABLE."
-  (dolist (buf (buffer-list))
-    (with-current-buffer buf
-      (when (and (bound-and-true-p spell-fu-mode) (bound-and-true-p spell-fu--cache-tables))
-        (dolist (table spell-fu--cache-tables)
-          (when (eq cache-table table)
-            ;; For now simply clear syntax highlighting.
-            (unless (<= spell-fu-idle-delay 0.0)
-              (spell-fu--idle-overlays-remove))
-            (spell-fu--overlays-remove)
-            (font-lock-flush)))))))
 
 (defun spell-fu--word-add-or-remove (word words-file action)
   "Apply ACTION to WORD from the personal dictionary WORDS-FILE.
@@ -1183,37 +1217,6 @@ Return t when the action succeeded."
 
               (spell-fu--buffers-refresh-with-cache-table this-cache-table)
               t)))))))
-
-(defun spell-fu--word-at-point ()
-  "Return the word at the current point or nil."
-  (let
-    (
-      (point-init (point))
-      (pos-beg (line-beginning-position))
-      (pos-end (line-end-position)))
-    (save-excursion
-      (goto-char pos-beg)
-      (catch 'result
-        (with-syntax-table spell-fu-syntax-table
-          (save-match-data
-            (while (re-search-forward spell-fu-word-regexp pos-end t)
-              (when (and (<= (match-beginning 0) point-init) (<= point-init (match-end 0)))
-                (throw 'result (match-string-no-properties 0))))))
-        (throw 'result nil)))))
-
-(defun spell-fu-word-add ()
-  "Add the current word to the personal dictionary.
-
-Return t when the word has been added."
-  (interactive)
-  (spell-fu--word-add-or-remove (spell-fu--word-at-point) ispell-personal-dictionary 'add))
-
-(defun spell-fu-word-remove ()
-  "Remove the current word from the personal dictionary.
-
-Return t when the word is removed."
-  (interactive)
-  (spell-fu--word-add-or-remove (spell-fu--word-at-point) ispell-personal-dictionary 'remove))
 
 
 ;; ---------------------------------------------------------------------------

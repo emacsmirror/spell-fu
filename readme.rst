@@ -243,11 +243,11 @@ Other Packages
 `WCheck Mode <https://github.com/tlikonen/wcheck-mode>`__
    This is a close match to Spell-fu, the main differences is that it's calling a sub-process
    on each word which gives slower results.
-   I also found it's configuration rather difficult to manage.
+   I also found its configuration rather difficult to manage.
 
    Spell-fu in contrast takes a different approach,
    instead of exposing many advanced options,
-   you can set your own function to extract works from a region of text.
+   you can set your own function to extract words from a region of text.
 
 
 TODO

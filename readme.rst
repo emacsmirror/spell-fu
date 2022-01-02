@@ -63,6 +63,19 @@ Or you may wish to configure this per-mode, e.g:
      (lambda ()
        (spell-fu-mode)))
 
+Multiple languages can be used in the same buffer by configuring multiple dictionaries:
+
+.. code-block:: elisp
+
+   (add-hook 'spell-fu-mode-hook
+     (lambda ()
+       (spell-fu-dictionary-add (spell-fu-get-ispell "de"))
+       (spell-fu-dictionary-add (spell-fu-get-ispell "fr"))
+       (spell-fu-dictionary-add
+         (spell-fu-get-personal-dictionary "de-personal" "/home/user/.aspell.de.pws"))
+       (spell-fu-dictionary-add
+         (spell-fu-get-personal-dictionary "fr-personal" "/home/user/.aspell.fr.pws"))))
+
 
 Customization
 -------------
@@ -185,10 +198,31 @@ there are some commands provided which may come in handy.
    Checks spelling for the entire buffer, reporting the number of misspelled words found.
 
 ``spell-fu-word-add``
-   Add the word under the cursor to the personal dictionary.
+   Add the word under the cursor to a personal dictionary.
 
 ``spell-fu-word-remove``
-   Remove the word under the cursor from the personal dictionary.
+   Remove the word under the cursor from a personal dictionary.
+
+
+Multiple dictionaries
+---------------------
+
+Multiple dictionaries can be enabled and used alongside each other.
+
+``spell-fu-dictionaries``
+   Variable which lists the currently enabled dictionaries.
+
+``spell-fu-dictionary-add``
+   Enable a dictionary in the current buffer.
+
+``spell-fu-dictionary-remove``
+   Disable a dictionary in the current buffer.
+
+``spell-fu-get-ispell-dictionary``
+   Get the ispell / aspell dictionary with the given name.
+
+``spell-fu-get-personal-dictionary``
+   Get a writable personal dictionary for saving user words.
 
 
 Details
@@ -209,11 +243,11 @@ Other Packages
 `WCheck Mode <https://github.com/tlikonen/wcheck-mode>`__
    This is a close match to Spell-fu, the main differences is that it's calling a sub-process
    on each word which gives slower results.
-   I also found it's configuration rather difficult to manage.
+   I also found its configuration rather difficult to manage.
 
    Spell-fu in contrast takes a different approach,
    instead of exposing many advanced options,
-   you can set your own function to extract works from a region of text.
+   you can set your own function to extract words from a region of text.
 
 
 TODO

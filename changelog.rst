@@ -4,6 +4,7 @@ Change Log
 ##########
 
 - In development.
+  - Support for multiple dictionaries at once.
   - Reduce idle overlay fragmentation.
   - Idle timers now update buffers that have lost focus.
   - Fix for disabling ``spell-fu-mode`` preventing other buffers that have ``spell-fu-mode`` enabled from updating.

@@ -206,7 +206,7 @@ Notes:
         (spell-fu--refresh)))))
 
 (defun spell-fu--get-edit-candidate-dictionaries (word action)
-  "Return dictionaries for which it makes sense to perform ACTION on WORD.
+  "Return dictionaries for which it make sense to perform ACTION on WORD.
 
 ACTION is 'remove or 'add.  Returned candidates are dictionaries
 which support the operation, and correspondingly do / do not
@@ -230,7 +230,8 @@ already contain WORD."
       spell-fu-dictionaries)))
 
 (defun spell-fu--read-dictionary (candidate-dicts prompt)
-  "Ask the user to select one dictionary from CANDIDATE-DICTS."
+  "Ask the user to select one dictionary from CANDIDATE-DICTS.
+PROMPT is shown to the users completing read."
   (if (<= (length candidate-dicts) 1)
     (car candidate-dicts) ; Return the single choice
     (let
@@ -281,7 +282,7 @@ Optional argument BODY runs with the depth override."
     ,@body))
 
 (defmacro spell-fu--setq-expand-range-to-line-boundaries (pos-beg pos-end)
-  "Set POINT-START the the line beginning, POINT-END to the line end."
+  "Set POS-BEG the the line beginning, POS-END to the line end."
   (declare (indent 1))
   ;; Ignore field boundaries.
   (let ((inhibit-field-text-motion t))
@@ -435,13 +436,13 @@ the caller will need to regenerate the cache."
 
 (defun spell-fu--overlays-remove (&optional pos-beg pos-end)
   "Remove symbol `spell-fu-mode' overlays from current buffer.
-If optional arguments POINT-START and POINT-END exist
-remove overlays from range POINT-START to POINT-END.
+If optional arguments POS-BEG and POS-END exist
+remove overlays from range POS-BEG to POS-END
 Otherwise remove all overlays."
   (remove-overlays pos-beg pos-end 'spell-fu-mode t))
 
 (defun spell-fu-mark-incorrect (pos-beg pos-end)
-  "Mark the text from POINT-START to POINT-END with incorrect spelling overlay."
+  "Mark the text from POS-BEG to POS-END with incorrect spelling overlay."
   (let ((item-ov (make-overlay pos-beg pos-end)))
     (overlay-put item-ov 'spell-fu-mode t)
     (overlay-put item-ov 'face 'spell-fu-incorrect-face)
@@ -455,8 +456,8 @@ Otherwise remove all overlays."
   "Run the spell checker on a word.
 
 Marking the spelling as incorrect using `spell-fu-incorrect-face' on failure.
-Argument POINT-START the beginning position of WORD.
-Argument POINT-END the end position of WORD."
+Argument POS-BEG the beginning position of WORD.
+Argument POS-END the end position of WORD."
   (or
     ;; Dictionary search.
     (let ((encoded-word (encode-coding-string (downcase word) 'utf-8)))
@@ -511,7 +512,7 @@ Argument POINT-END the end position of WORD."
     result))
 
 (defun spell-fu--check-range-with-faces (pos-beg pos-end)
-  "Check spelling for POINT-START & POINT-END.
+  "Check spelling for POS-BEG & POS-END.
 
 This only checks the text matching face rules."
   (spell-fu--overlays-remove pos-beg pos-end)
@@ -572,7 +573,7 @@ This only checks the text matching face rules."
                 (setq ok-beg ok-end-iter)))))))))
 
 (defun spell-fu--check-range-without-faces (pos-beg pos-end)
-  "Check spelling for POINT-START & POINT-END, checking all text."
+  "Check spelling for POS-BEG & POS-END, checking all text."
   (spell-fu--overlays-remove pos-beg pos-end)
   (with-syntax-table spell-fu-syntax-table
     (save-match-data
@@ -586,7 +587,7 @@ This only checks the text matching face rules."
             (spell-fu-check-word word-beg word-end (match-string-no-properties 0))))))))
 
 (defun spell-fu-check-range-default (pos-beg pos-end)
-  "Check spelling POINT-START & POINT-END, checking comments and strings."
+  "Check spelling POS-BEG & POS-END, checking comments and strings."
   (cond
     ((or spell-fu-faces-include spell-fu-faces-exclude)
       (spell-fu--check-range-with-faces pos-beg pos-end))
@@ -598,7 +599,7 @@ This only checks the text matching face rules."
 ;; Immediate Style (spell-fu-idle-delay zero or lower)
 
 (defun spell-fu--font-lock-fontify-region (pos-beg pos-end)
-  "Update spelling for POINT-START & POINT-END to the queue, checking all text."
+  "Update spelling for POS-BEG & POS-END to the queue, checking all text."
   (spell-fu--setq-expand-range-to-line-boundaries
     ;; Warning these values are set in place.
     pos-beg pos-end)
@@ -624,13 +625,13 @@ This only checks the text matching face rules."
 
 (defun spell-fu--idle-overlays-remove (&optional pos-beg pos-end)
   "Remove `spell-fu-pending' overlays from current buffer.
-If optional arguments POINT-START and POINT-END exist
-remove overlays from range POINT-START to POINT-END.
+If optional arguments POS-BEG and POS-END exist
+remove overlays from range POS-BEG to POS-END
 Otherwise remove all overlays."
   (remove-overlays pos-beg pos-end 'spell-fu-pending t))
 
 (defun spell-fu--idle-handle-pending-ranges-impl (visible-beg visible-end)
-  "VISIBLE-START and VISIBLE-END typically from `window-start' and `window-end'.
+  "VISIBLE-BEG and VISIBLE-END typically from `window-start' and `window-end'.
 
 Although you can pass in specific ranges as needed,
 when checking the entire buffer for example."
@@ -681,7 +682,7 @@ when checking the entire buffer for example."
   (spell-fu--idle-handle-pending-ranges-impl (window-start) (window-end)))
 
 (defun spell-fu--idle-font-lock-region-pending (pos-beg pos-end)
-  "Track the range to spell check, adding POINT-START & POINT-END to the queue."
+  "Track the range to spell check, adding POS-BEG & POS-END to the queue."
   (when (and spell-fu--idle-overlay-last (not (overlay-buffer spell-fu--idle-overlay-last)))
     (setq spell-fu--idle-overlay-last nil))
 
@@ -829,7 +830,7 @@ when checking the entire buffer for example."
 ;; Public Functions
 
 (defun spell-fu-region (&optional pos-beg pos-end verbose)
-  "Spell check the region between POINT-START and POINT-END.
+  "Spell check the region between POS-BEG and POS-END.
 
 The VERBOSE argument reports the findings."
   ;; Expand range to line bounds, when set.
@@ -1079,8 +1080,7 @@ Return t if the file was updated."
 ;; Word List Initialization
 
 (defun spell-fu--aspell-update (dict dict-name)
-  "Set up the Aspell dictionary DICT, initializing it as necessary."
-
+  "Set up the Aspell DICT, named DICT-NAME initializing it as necessary."
   (let
     ( ;; Get the paths of temporary files, ensure the cache file is
       ;; newer, otherwise regenerate it.
@@ -1103,7 +1103,7 @@ Return t if the file was updated."
 
 
 (defun spell-fu--aspell-find-data-file (dict-aspell-name)
-  "For Aspell dictionary DICT, return an associated data file path or nil."
+  "For Aspell DICT-ASPELL-NAME, return an associated data file path or nil."
   ;; Based on `ispell-aspell-find-dictionary'.
 
   ;; Make sure `ispell-aspell-dict-dir' is defined.
@@ -1134,7 +1134,7 @@ Return t if the file was updated."
                   (throw 'datafile fullpath))))))))))
 
 (defun spell-fu--aspell-lang-from-dict (dict-name)
-  "Return the language of a DICT or nil if identification fails.
+  "Return the language of a DICT-NAME or nil if identification fails.
 
 Supports aspell alias dictionaries, e.g. 'german' or 'deutsch',
 for 'de_DE' using Ispell's lookup routines.
@@ -1151,6 +1151,7 @@ associated with the dictionary."
 ;; Dictionary Definition
 
 (defun spell-fu-get-ispell-dictionary (name)
+  "Get the ispell dictionary named NAME."
   (let ((dict (intern (concat "spell-fu-ispell-words-" name))))
     (unless (boundp dict)
       ;; Start with no words - construct them lazily
@@ -1167,7 +1168,8 @@ associated with the dictionary."
 
 (defun spell-fu--personal-word-list-ensure (words-file personal-words-file)
   "Ensure the word list is generated for the personal dictionary DICT-NAME.
-Argument WORDS-FILE is the file to write the word list into.
+Argument WORDS-FILE is the destination file to write the word list into.
+Argument PERSONAL-WORDS-FILE is the source file to read words from.
 
 Return t if the file was updated."
   (let*
@@ -1219,8 +1221,8 @@ Return t if the file was updated."
       t)))
 
 (defun spell-fu--personal-update (dict dict-file)
-  "Set up the personal dictionary DICT, initializing it as necessary."
-
+  "Set up the personal dictionary DICT, initializing it as necessary.
+Argument DICT-FILE is the absolute path to the dictionary."
   (let
     ( ;; Get the paths of temporary files, ensure the cache file is
       ;; newer, otherwise regenerate it.
@@ -1242,7 +1244,7 @@ Return t if the file was updated."
           (spell-fu--cache-from-word-list words-file cache-file))))))
 
 (defun spell-fu--personal-word-add-or-remove (word dict dict-file action)
-  "Apply ACTION to WORD for the personal dictionary DICT-FILE."
+  "Apply ACTION to WORD for the personal dictionary DICT-FILE for dictionary DICT."
   (catch 'result
     (spell-fu--with-message-prefix "Spell-fu: "
       (unless word
@@ -1359,6 +1361,8 @@ Return t if the file was updated."
             t))))))
 
 (defun spell-fu-get-personal-dictionary (name dict-file)
+  "Get the personal dictionary NAME.
+Argument DICT-FILE is the absolute path to the dictionary."
   (let ((dict (intern (concat "spell-fu-ispell-personal-" name))))
     (unless (boundp dict)
       ;; Start with no words - construct them lazily

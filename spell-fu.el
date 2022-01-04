@@ -1010,7 +1010,9 @@ Return t if the file was updated."
       (dict-aspell-name (cadr (nth 5 (assoc dict-name ispell-aspell-dictionary-alist))))
       (dict-file (and dict-aspell-name (spell-fu--aspell-find-data-file dict-name)))
       (is-dict-outdated
-        (and has-words-file dict-file (spell-fu--file-is-older words-file dict-file))))
+        (and has-words-file dict-file (spell-fu--file-is-older words-file dict-file)))
+      ;; Return value, failure to run `aspell' leaves this nil.
+      (updated nil))
 
     (when (or (not has-words-file) is-dict-outdated)
 
@@ -1028,54 +1030,73 @@ Return t if the file was updated."
                   (or (and ispell-really-aspell ispell-program-name) (executable-find "aspell"))))
 
               (cond
+                ((null aspell-bin)
+                  (message "\"aspell\" command not found!"))
                 ((string-equal dict-name "default")
-                  (call-process aspell-bin nil t nil "dump" "master"))
+                  (condition-case err
+                    (progn
+                      (call-process aspell-bin nil t nil "dump" "master")
+                      (setq updated t))
+                    (error
+                      (message
+                        "failed to run \"aspell\" with default dictionary with error: %s"
+                        (error-message-string err)))))
                 (t
-                  (call-process aspell-bin nil t nil "-d" dict-name "dump" "master")))
+                  (condition-case err
+                    (progn
+                      (call-process aspell-bin nil t nil "-d" dict-name "dump" "master")
+                      (setq updated t))
+                    (error
+                      (message
+                        "failed to run aspell with %S dictionary with error: %s"
+                        dict-name
+                        (error-message-string err))))))
 
               ;; Check whether the dictionary has affixes, expand if necessary.
-              (when (re-search-backward "^[[:alpha:]]*/[[:alnum:]]*$" nil t)
-                (let ((lang (spell-fu--aspell-lang-from-dict dict-name)))
-                  (unless
-                    (zerop
-                      (shell-command-on-region
-                        (point-min) (point-max)
-                        (cond
-                          (lang
-                            (format "%s -l %s expand" aspell-bin lang))
-                          (t
-                            (format "%s expand" aspell-bin)))
-                        t t
-                        ;; Output any errors into the message buffer instead of the word-list.
-                        "*spell-fu word generation errors*"))
-                    (message
-                      (format
-                        "spell-fu: affix extension for dictionary '%s' failed (with language: %S)."
-                        dict-name
-                        lang)))
-                  (goto-char (point-min))
-                  (while (search-forward " " nil t)
-                    (replace-match "\n")))))
+              (when updated
+                (when (re-search-backward "^[[:alpha:]]*/[[:alnum:]]*$" nil t)
+                  (let ((lang (spell-fu--aspell-lang-from-dict dict-name)))
+                    (unless
+                      (zerop
+                        (shell-command-on-region
+                          (point-min) (point-max)
+                          (cond
+                            (lang
+                              (format "%s -l %s expand" aspell-bin lang))
+                            (t
+                              (format "%s expand" aspell-bin)))
+                          t t
+                          ;; Output any errors into the message buffer instead of the word-list.
+                          "*spell-fu word generation errors*"))
+                      (message
+                        (format
+                          "spell-fu: affix extension for dictionary '%s' failed (with language: %S)."
+                          dict-name
+                          lang)))
+                    (goto-char (point-min))
+                    (while (search-forward " " nil t)
+                      (replace-match "\n"))))
 
-            (setq word-list (spell-fu--buffer-as-line-list (current-buffer) word-list)))
+                (setq word-list (spell-fu--buffer-as-line-list (current-buffer) word-list)))))
 
           ;; Case insensitive sort is important if this is used for `ispell-complete-word-dict'.
           ;; Which is a handy double-use for this file.
-          (let ((word-list-ncase nil))
-            (dolist (word word-list)
-              (push (cons (downcase word) word) word-list-ncase))
+          (when updated
+            (let ((word-list-ncase nil))
+              (dolist (word word-list)
+                (push (cons (downcase word) word) word-list-ncase))
 
-            ;; Sort by the lowercase word.
-            (setq word-list-ncase
-              (sort word-list-ncase (lambda (a b) (string-lessp (car a) (car b)))))
+              ;; Sort by the lowercase word.
+              (setq word-list-ncase
+                (sort word-list-ncase (lambda (a b) (string-lessp (car a) (car b)))))
 
-            ;; Write to 'words-file'.
-            (with-temp-buffer
-              (dolist (line-cons word-list-ncase)
-                (insert (cdr line-cons) "\n"))
-              (write-region nil nil words-file nil 0)))))
+              ;; Write to 'words-file'.
+              (with-temp-buffer
+                (dolist (line-cons word-list-ncase)
+                  (insert (cdr line-cons) "\n"))
+                (write-region nil nil words-file nil 0))))))
 
-      t)))
+      updated)))
 
 ;; Word List Initialization
 

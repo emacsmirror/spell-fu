@@ -4,6 +4,7 @@ Change Log
 ##########
 
 - In development.
+  - Fix faces of overlays (such as ``hl-line-mode``) no longer mask other faces when selecting words to check.
   - Support for multiple dictionaries at once.
   - Reduce idle overlay fragmentation.
   - Idle timers now update buffers that have lost focus.

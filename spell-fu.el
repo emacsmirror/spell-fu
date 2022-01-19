@@ -316,7 +316,10 @@ Argument POS return faces at this point."
   (let
     ( ;; List of faces to return.
       (faces nil)
-      (faceprop (or (get-char-property pos 'read-face-name) (get-char-property pos 'face))))
+      ;; NOTE: use `get-text-property' instead of `get-char-property' so overlays are excluded,
+      ;; since this causes overlays with `hl-line-mode' (for example) to mask other faces.
+      ;; If we want to include faces of overlays, this could be supported.
+      (faceprop (or (get-text-property pos 'read-face-name) (get-text-property pos 'face))))
     (cond
       ((facep faceprop)
         (push faceprop faces))

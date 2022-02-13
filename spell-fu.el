@@ -1085,10 +1085,9 @@ Return t if the file was updated."
                           ;; Output any errors into the message buffer instead of the word-list.
                           "*spell-fu word generation errors*"))
                       (message
-                        (format
-                          "spell-fu: affix extension for dictionary '%s' failed (with language: %S)."
-                          dict-name
-                          lang)))
+                        "spell-fu: affix extension for dictionary '%s' failed (with language: %S)."
+                        dict-name
+                        lang))
                     (goto-char (point-min))
                     (while (search-forward " " nil t)
                       (replace-match "\n"))))

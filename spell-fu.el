@@ -206,23 +206,26 @@ Notes:
 ACTION is 'remove or 'add.  Returned candidates are dictionaries
 which support the operation, and correspondingly do / do not
 already contain WORD."
-
   (let
     (
       (adding (eq action 'add))
       (encoded-word (encode-coding-string (downcase word) 'utf-8)))
-    (cl-remove-if-not
-      (lambda (dict)
-        (and
-          ;; Operation supported?
-          (get
-            dict
-            (if adding
-              'add-word
-              'remove-word))
-          ;; Word is / is not in dictionary?
-          (eq adding (null (gethash encoded-word (symbol-value dict))))))
-      spell-fu-dictionaries)))
+    (delq
+      nil
+      (mapcar
+        (lambda (dict)
+          (and
+            ;; Operation supported?
+            (get
+              dict
+              (if adding
+                'add-word
+                'remove-word))
+            ;; Word is / is not in dictionary?
+            (eq adding (null (gethash encoded-word (symbol-value dict))))
+            ;; Result.
+            dict))
+        spell-fu-dictionaries))))
 
 (defun spell-fu--read-dictionary (candidate-dicts prompt)
   "Ask the user to select one dictionary from CANDIDATE-DICTS.

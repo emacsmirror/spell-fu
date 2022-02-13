@@ -160,6 +160,10 @@ Notes:
 ;; ---------------------------------------------------------------------------
 ;; Dictionary Utility Functions
 
+(defsubst spell-fu--canonicalize-word (word)
+  "Return lowercase UTF-8 encoded WORD."
+  (encode-coding-string (downcase word) 'utf-8))
+
 (defun spell-fu--default-dictionaries ()
   "Construct the default value of `spell-fu-dictionaries'."
   (nconc
@@ -209,7 +213,7 @@ already contain WORD."
   (let
     (
       (adding (eq action 'add))
-      (encoded-word (encode-coding-string (downcase word) 'utf-8)))
+      (encoded-word (spell-fu--canonicalize-word word)))
     (delq
       nil
       (mapcar
@@ -373,7 +377,7 @@ save some time by not spending time reading it back."
       (while (not (eobp))
         (let ((l (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
           ;; Value of 't' is just for simplicity, it's no used except for check the item exists.
-          (puthash (encode-coding-string (downcase l) 'utf-8) t word-table)
+          (puthash (spell-fu--canonicalize-word l) t word-table)
           (forward-line 1))))
 
     ;; Write write it to a file.
@@ -473,7 +477,7 @@ Marking the spelling as incorrect using `spell-fu-incorrect-face' on failure.
 Argument POS-BEG the beginning position of WORD.
 Argument POS-END the end position of WORD."
   ;; Dictionary search.
-  (unless (spell-fu--check-word-in-dict-list (encode-coding-string (downcase word) 'utf-8))
+  (unless (spell-fu--check-word-in-dict-list (spell-fu--canonicalize-word word))
     ;; Ignore all uppercase words.
     (unless (equal word (upcase word))
       ;; Mark as incorrect otherwise.
@@ -962,7 +966,7 @@ Return t when the word has been added."
         "Add to dictionary: ")))
   (let ((word (spell-fu--word-at-point)))
     (if dict
-      (let ((encoded-word (encode-coding-string (downcase word) 'utf-8)))
+      (let ((encoded-word (spell-fu--canonicalize-word word)))
         (funcall (get dict 'add-word) encoded-word)
         (puthash encoded-word t (symbol-value dict))
         t)
@@ -980,7 +984,7 @@ Return t when the word has been removed."
         "Remove from dictionary: ")))
   (let ((word (spell-fu--word-at-point)))
     (if dict
-      (let ((encoded-word (encode-coding-string (downcase (spell-fu--word-at-point)) 'utf-8)))
+      (let ((encoded-word (spell-fu--canonicalize-word word)))
         (funcall (get dict 'remove-word) encoded-word)
         (remhash encoded-word (symbol-value dict))
         t)

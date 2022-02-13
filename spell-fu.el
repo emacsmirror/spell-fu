@@ -154,6 +154,8 @@ Notes:
 ;; Always check this has not been deleted (has a valid buffer) before use.
 (defvar-local spell-fu--idle-overlay-last nil)
 
+;; Cache the result of: `(mapcar (lambda (dict) (symbol-value dict)) spell-fu-dictionaries)'
+(defvar-local spell-fu--cache-table-list nil)
 
 ;; ---------------------------------------------------------------------------
 ;; Dictionary Utility Functions
@@ -173,6 +175,11 @@ Notes:
 (defun spell-fu--words-file (dict)
   "Return the location of the word-list with dictionary DICT."
   (expand-file-name (format "words_%s.txt" (symbol-name dict)) spell-fu-directory))
+
+(defun spell-fu--refresh-cache-table-list ()
+  "Refresh internal list `spell-fu--cache-table-list'."
+  (setq spell-fu--cache-table-list
+    (mapcar (lambda (dict) (symbol-value dict)) spell-fu-dictionaries)))
 
 (defun spell-fu--refresh ()
   "Reset spell-checked overlays in the current buffer."
@@ -443,22 +450,31 @@ Otherwise remove all overlays."
     (overlay-put item-ov 'evaporate t)
     item-ov))
 
+(defsubst spell-fu--check-word-in-dict-list (encoded-word)
+  "Return t if ENCODED-WORD is found in `spell-fu-dictionaries'."
+  (let
+    (
+      (found nil)
+      (cache-table-list spell-fu--cache-table-list))
+    (while cache-table-list
+      (let ((cache-table (pop cache-table-list)))
+        (when (gethash encoded-word cache-table nil)
+          (setq found t)
+          (setq cache-table-list nil))))
+    found))
+
 (defun spell-fu-check-word (pos-beg pos-end word)
   "Run the spell checker on a word.
 
 Marking the spelling as incorrect using `spell-fu-incorrect-face' on failure.
 Argument POS-BEG the beginning position of WORD.
 Argument POS-END the end position of WORD."
-  (or
-    ;; Dictionary search.
-    (let ((encoded-word (encode-coding-string (downcase word) 'utf-8)))
-      (cl-find-if
-        (lambda (dict) (gethash encoded-word (symbol-value dict) nil))
-        spell-fu-dictionaries))
+  ;; Dictionary search.
+  (unless (spell-fu--check-word-in-dict-list (encode-coding-string (downcase word) 'utf-8))
     ;; Ignore all uppercase words.
-    (equal word (upcase word))
-    ;; Mark as incorrect otherwise.
-    (spell-fu-mark-incorrect pos-beg pos-end)))
+    (unless (equal word (upcase word))
+      ;; Mark as incorrect otherwise.
+      (spell-fu-mark-incorrect pos-beg pos-end))))
 
 (defun spell-fu--word-at-point ()
   "Return the word at the current point or nil."
@@ -975,12 +991,14 @@ Return t when the word has been removed."
     (let ((update-fun (get dict 'update)))
       (when update-fun
         (funcall update-fun)))
+    (spell-fu--refresh-cache-table-list)
     (spell-fu--refresh)))
 
 (defun spell-fu-dictionary-remove (dict)
   "Remove DICT from the list of active dictionaries."
   (setq spell-fu-dictionaries (delq dict spell-fu-dictionaries))
   (when (bound-and-true-p spell-fu-mode)
+    (spell-fu--refresh-cache-table-list)
     (spell-fu--refresh)))
 
 
@@ -1418,6 +1436,8 @@ Argument DICT-FILE is the absolute path to the dictionary."
       (when update-fun
         (funcall update-fun))))
 
+  (spell-fu--refresh-cache-table-list)
+
   ;; We may want defaults for other modes,
   ;; although keep this general.
   (cond
@@ -1436,6 +1456,8 @@ Argument DICT-FILE is the absolute path to the dictionary."
 
 (defun spell-fu-mode-disable ()
   "Turn off option `spell-fu-mode' for the current buffer."
+  (kill-local-variable 'spell-fu--cache-table-list)
+
   (cond
     ((<= spell-fu-idle-delay 0.0)
       (spell-fu--immediate-disable))

@@ -69,8 +69,8 @@ Multiple languages can be used in the same buffer by configuring multiple dictio
 
    (add-hook 'spell-fu-mode-hook
      (lambda ()
-       (spell-fu-dictionary-add (spell-fu-get-ispell "de"))
-       (spell-fu-dictionary-add (spell-fu-get-ispell "fr"))
+       (spell-fu-dictionary-add (spell-fu-get-ispell-dictionary "de"))
+       (spell-fu-dictionary-add (spell-fu-get-ispell-dictionary "fr"))
        (spell-fu-dictionary-add
          (spell-fu-get-personal-dictionary "de-personal" "/home/user/.aspell.de.pws"))
        (spell-fu-dictionary-add

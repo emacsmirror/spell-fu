@@ -207,7 +207,7 @@ Notes:
 (defun spell-fu--get-edit-candidate-dictionaries (word action)
   "Return dictionaries for which it make sense to perform ACTION on WORD.
 
-ACTION is 'remove or 'add.  Returned candidates are dictionaries
+ACTION is `'remove' or `'add'.  Returned candidates are dictionaries
 which support the operation, and correspondingly do / do not
 already contain WORD."
   (let
@@ -1172,8 +1172,8 @@ Return t if the file was updated."
 (defun spell-fu--aspell-lang-from-dict (dict-name)
   "Return the language of a DICT-NAME or nil if identification fails.
 
-Supports aspell alias dictionaries, e.g. 'german' or 'deutsch',
-for 'de_DE' using Ispell's lookup routines.
+Supports aspell alias dictionaries, e.g. \"german\" or \"deutsch\",
+for \"de_DE\" using Ispell's lookup routines.
 The language is identified by looking for the data file
 associated with the dictionary."
   (unless ispell-aspell-dictionary-alist

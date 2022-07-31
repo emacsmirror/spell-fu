@@ -265,7 +265,7 @@ Argument PREFIX is the text to add at the start of the message.
 Optional argument BODY runs with the message prefix."
   (declare (indent 1))
   `
-  (spell-fu--with-advice 'message
+  (spell-fu--with-advice #'message
     :around
     (lambda (fn-orig arg &rest args)
       (apply fn-orig (append (list (concat "%s" arg)) (list ,prefix) args)))
@@ -277,7 +277,7 @@ Argument DEPTH-OVERRIDE the depth value to call `add-hook' with.
 Optional argument BODY runs with the depth override."
   (declare (indent 1))
   `
-  (spell-fu--with-advice 'add-hook
+  (spell-fu--with-advice #'add-hook
     :around
     (lambda (fn-orig hook function &optional _depth local)
       (funcall fn-orig hook function ,depth-override local))

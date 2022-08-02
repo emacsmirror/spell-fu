@@ -1306,7 +1306,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
         ;; So we can use line count as word count.
         (while
           (and
-            (eq 0 (forward-line -1))
+            (zerop (forward-line -1))
             (string-blank-p
               (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
           (delete-region
@@ -1356,7 +1356,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
                         (line-beginning-position)
                         (line-end-position))
                       word))
-                  (setq keep-searching (eq 0 (forward-line 1)))))
+                  (setq keep-searching (zerop (forward-line 1)))))
 
               (insert word "\n")
 
@@ -1372,7 +1372,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
               (goto-char word-point)
               (delete-region
                 (line-beginning-position)
-                (or (and (eq 0 (forward-line 1)) (point)) (line-end-position)))
+                (or (and (zerop (forward-line 1)) (point)) (line-end-position)))
 
               (message "\"%s\" successfully removed!" word)
               (setq changed t))

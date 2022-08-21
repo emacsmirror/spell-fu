@@ -70,6 +70,14 @@ Set to 0.0 to highlight immediately (as part of syntax highlighting)."
   "List of major-modes to exclude when `spell-fu' has been enabled globally."
   :type '(repeat symbol))
 
+(defvar-local spell-fu-buffer-session-localwords nil
+  "Optional buffer-local word-list of words.
+This is intended to be set by file-locals or dir-locals.
+Call `spell-fu-buffer-session-localwords-refresh' after run-time modifications.")
+
+;;;###autoload
+(put 'spell-fu-buffer-session-localwords 'safe-local-variable #'spell-fu-list-of-strings-p)
+
 (defvar-local global-spell-fu-ignore-buffer nil
   "When non-nil, the global mode will not be enabled for this buffer.
 This variable can also be a predicate function, in which case
@@ -157,6 +165,17 @@ Notes:
 ;; Cache the result of: `(mapcar (lambda (dict) (symbol-value dict)) spell-fu-dictionaries)'
 (defvar-local spell-fu--cache-table-list nil)
 
+;; The buffer local dictionary generated from `spell-fu-buffer-session-localwords'.
+(defvar-local spell-fu--buffer-localwords-cache-table nil)
+
+;; Map `spell-fu-buffer-session-localwords' identity to existing
+;; `spell-fu--buffer-localwords-cache-table' entries to avoid conversions from
+;; word lists to dictionaries by checking if the conversion has already been done.
+;;
+;; NOTE: The keys are the objects for the local-word list,
+;; so this relies on the lists being shared between buffers (not just matching contents).
+(defvar spell-fu--buffer-localwords-global-cache-table-map nil)
+
 ;; ---------------------------------------------------------------------------
 ;; Dictionary Utility Functions
 
@@ -170,7 +189,34 @@ Notes:
     (list
       (spell-fu-get-ispell-dictionary (or ispell-local-dictionary ispell-dictionary "default")))
     (when (and ispell-personal-dictionary (file-exists-p ispell-personal-dictionary))
-      (list (spell-fu-get-personal-dictionary "default" ispell-personal-dictionary)))))
+      (list (spell-fu-get-personal-dictionary "default" ispell-personal-dictionary)))
+    (when spell-fu-buffer-session-localwords
+      (list (spell-fu-get-buffer-session-localwords-dictionary)))))
+
+(defun spell-fu--dictionaries-test-any (test-fn)
+  "Remove any dictionaries that match TEST-FN."
+  (let ((result nil))
+    (let ((dict-list spell-fu-dictionaries))
+      (while dict-list
+        (let ((dict (pop dict-list)))
+          (when (funcall test-fn dict)
+            (setq result t)
+            (setq dict-list nil)))))
+    result))
+
+(defun spell-fu--dictionaries-remove-any (test-fn)
+  "Return non-nil if any dictionaries match TEST-FN."
+  (setq spell-fu-dictionaries
+    (remq
+      nil
+      (mapcar
+        (lambda (dict)
+          (cond
+            ((funcall test-fn dict)
+              dict)
+            (t
+              nil)))
+        spell-fu-dictionaries))))
 
 (defun spell-fu--cache-file (dict)
   "Return the location of the cache file with dictionary DICT."
@@ -355,6 +401,11 @@ Argument POS return faces at this point."
   "Return t when FILE-TEST is older than any files in FILE-LIST."
   (spell-fu--file-is-older-list file-test file-list))
 
+;; Auto load as this is a callback for `safe-local-variable'.
+;;;###autoload
+(defun spell-fu-list-of-strings-p (obj)
+  "Return t when OBJ is a list of strings."
+  (and (listp obj) (not (memq nil (mapcar #'stringp obj)))))
 
 ;; ---------------------------------------------------------------------------
 ;; Word List Cache
@@ -1418,6 +1469,134 @@ Argument DICT-FILE is the absolute path to the dictionary."
         (lambda (word) (spell-fu--personal-word-add-or-remove word dict dict-file 'remove))))
     dict))
 
+;; ---------------------------------------------------------------------------
+;; Buffer Local Words
+
+(defun spell-fu--buffer-localwords-cache-table-update ()
+  "Set `spell-fu--buffer-localwords-cache-table' from the local word list."
+  (let
+    ( ;; Reuse the previous table if possible.
+      (word-table
+        (and
+          spell-fu--buffer-localwords-global-cache-table-map
+          (gethash
+            spell-fu-buffer-session-localwords
+            spell-fu--buffer-localwords-global-cache-table-map
+            nil))))
+
+    (unless word-table
+      (setq word-table
+        (make-hash-table :test #'equal :size (length spell-fu-buffer-session-localwords)))
+      (dolist (word spell-fu-buffer-session-localwords)
+        (puthash (spell-fu--canonicalize-word word) t word-table))
+      (unless spell-fu--buffer-localwords-global-cache-table-map
+        (setq spell-fu--buffer-localwords-global-cache-table-map
+          (make-hash-table :test #'eq :weakness 'value)))
+      (puthash
+        spell-fu-buffer-session-localwords
+        word-table
+        spell-fu--buffer-localwords-global-cache-table-map))
+    (setq spell-fu--buffer-localwords-cache-table word-table)))
+
+(defun spell-fu--buffer-localwords-add-or-remove (word action)
+  "Add or remove WORD from buffer local names depending on ACTION."
+  (catch 'result
+    (spell-fu--with-message-prefix "Spell-fu: "
+      (unless word
+        (message "word not found!")
+        (throw 'result nil))
+      ;; Case insensitive.
+      (let
+        (
+          (encoded-word (spell-fu--canonicalize-word word))
+          (changed nil))
+        (let ((word-in-dict (gethash encoded-word spell-fu--buffer-localwords-cache-table nil)))
+          (cond
+            ((eq action 'add)
+              (when word-in-dict
+                (message "\"%s\" already in the local dictionary." word)
+                (throw 'result nil))
+
+              (push encoded-word spell-fu-buffer-session-localwords)
+              (spell-fu--buffer-localwords-cache-table-update)
+
+              (message "\"%s\" successfully added!" word)
+              (setq changed t))
+
+            ((eq action 'remove)
+              (unless word-in-dict
+                (message "\"%s\" not in the personal dictionary." word)
+                (throw 'result nil))
+
+              (setq spell-fu-buffer-session-localwords
+                (delete encoded-word
+                  spell-fu-buffer-session-localwords))
+              (spell-fu--buffer-localwords-cache-table-update)
+
+              (message "\"%s\" successfully removed!" word)
+              (setq changed t))
+
+            (t ;; Internal error, should never happen.
+              (error "Invalid action %S" action)))
+
+          (when changed
+            ;; TODO: update file local variables?
+            t))))))
+
+(defun spell-fu-get-buffer-session-localwords-dictionary ()
+  "Get the personal dictionary NAME.
+Argument DICT-FILE is the absolute path to the dictionary."
+  (let ((dict 'spell-fu--buffer-localwords-cache-table))
+    ;; Start with no words - construct them lazily
+    (set dict nil)
+    ;; Set description
+    (put dict 'description "Buffer local dictionary")
+    ;; Set update function
+    (put dict 'update #'spell-fu--buffer-localwords-cache-table-update)
+    ;; Set add/remove functions
+    (put dict 'add-word (lambda (word) (spell-fu--buffer-localwords-add-or-remove word 'add)))
+    (put
+      dict
+      'remove-word
+      (lambda (word) (spell-fu--buffer-localwords-add-or-remove word 'remove)))
+    dict))
+
+(defun spell-fu--buffer-localwords-dictionary-test (dict)
+  "Return non-nil when DICT is a local-words dictionary."
+  (eq (get dict 'update) #'spell-fu--buffer-localwords-cache-table-update))
+
+(defun spell-fu--buffer-localwords-update-impl ()
+  "Implementation for `spell-fu-buffer-session-localwords-update'."
+  (let
+    (
+      (do-refresh-cache-table-list nil)
+      (has-localwords-dict
+        (spell-fu--dictionaries-test-any #'spell-fu--buffer-localwords-dictionary-test)))
+    (cond
+      (spell-fu-buffer-session-localwords
+        (unless has-localwords-dict ;; Add dict.
+          (setq spell-fu-dictionaries
+            (append
+              spell-fu-dictionaries
+              (list (spell-fu-get-buffer-session-localwords-dictionary))))
+          (setq do-refresh-cache-table-list t)))
+      (t
+        (when has-localwords-dict ;; Remove dict.
+          (spell-fu--dictionaries-remove-any #'spell-fu--buffer-localwords-dictionary-test)
+          (setq do-refresh-cache-table-list t))))
+    (cond
+      (spell-fu-buffer-session-localwords
+        (spell-fu--buffer-localwords-cache-table-update))
+      (t
+        (kill-local-variable 'spell-fu--buffer-localwords-cache-table)))
+    (when do-refresh-cache-table-list
+      (spell-fu--refresh-cache-table-list))))
+
+;;;###autoload
+(defun spell-fu-buffer-session-localwords-update ()
+  "Refresh after changing `spell-fu-buffer-session-localwords'."
+  (when spell-fu-mode
+    (spell-fu--buffer-localwords-update-impl)))
 
 ;; ---------------------------------------------------------------------------
 ;; Define Minor Mode

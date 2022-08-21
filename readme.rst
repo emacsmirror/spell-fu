@@ -136,6 +136,20 @@ You may wish to set these values differently based on the current major-mode.
       (global-spell-fu-mode)
 
 
+Buffer Local Words
+^^^^^^^^^^^^^^^^^^
+
+You may optionally define a buffer-local word list.
+
+``spell-fu-buffer-session-localwords``
+   A list of strings to accept as correctly spelled words.
+   These may be set by file or directory locals.
+
+   Changing this while spell-fu is already active requires calling:
+   ``spell-fu-buffer-session-localwords-update``.
+   Calling outside of ``spell-fu-mode`` has no effect.
+
+
 Advanced Buffer Local Settings
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

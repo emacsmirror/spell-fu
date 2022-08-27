@@ -4,6 +4,7 @@ Change Log
 ##########
 
 - In development.
+  - Fix #13, failure to properly generate word-list cache on MS-Windows.
   - Support buffer local word-lists via ``spell-fu-buffer-session-localwords``.
   - Fix faces of overlays (such as ``hl-line-mode``) no longer mask other faces when selecting words to check.
   - Support for multiple dictionaries at once.

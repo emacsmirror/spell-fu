@@ -155,7 +155,7 @@ Notes:
 
 ;; Use to ensure the cache is not from a previous release.
 ;; Only ever increase.
-(defconst spell-fu--cache-version "0.1")
+(defconst spell-fu--cache-version "0.2")
 
 ;; Keep track of the last overlay, this allows expanding the existing overlay where possible.
 ;; Useful since font-locking often uses multiple smaller ranges which can be merged into one range.
@@ -420,7 +420,10 @@ save some time by not spending time reading it back."
   (let
     ( ;; The header, an associative list of items.
       (cache-header (list (cons "version" spell-fu--cache-version)))
-      (word-table nil))
+      (word-table nil)
+      ;; Needed for Windows to prevent CRLF including new-lines in strings.
+      (coding-system-for-read 'utf-8-unix)
+      (coding-system-for-write 'utf-8-unix))
 
     (with-temp-buffer
       (insert-file-contents-literally words-file)
@@ -1156,11 +1159,13 @@ Return t if the file was updated."
               (setq word-list-ncase
                 (sort word-list-ncase (lambda (a b) (string-lessp (car a) (car b)))))
 
-              ;; Write to 'words-file'.
-              (with-temp-buffer
-                (dolist (line-cons word-list-ncase)
-                  (insert (cdr line-cons) "\n"))
-                (write-region nil nil words-file nil 0))))))
+              ;; Needed for Windows to prevent CRLF including new-lines in strings.
+              (let ((coding-system-for-write 'utf-8-unix))
+                ;; Write to 'words-file'.
+                (with-temp-buffer
+                  (dolist (line-cons word-list-ncase)
+                    (insert (cdr line-cons) "\n"))
+                  (write-region nil nil words-file nil 0)))))))
 
       updated)))
 

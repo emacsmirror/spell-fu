@@ -772,7 +772,12 @@ when checking the entire buffer for example."
         (overlay-put item-ov 'spell-fu-pending t)
         (overlay-put item-ov 'evaporate 't)
 
-        (setq spell-fu--idle-overlay-last item-ov)))))
+        (setq spell-fu--idle-overlay-last item-ov))))
+
+  ;; Use `inhibit-quit' as a way to check if `jit-lock-stealth' is in use.
+  (when inhibit-quit
+    (spell-fu--idle-handle-pending-ranges-impl pos-beg pos-end)))
+
 
 ;; ---------------------------------------------------------------------------
 ;; Internal Timer Management

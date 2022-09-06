@@ -4,6 +4,8 @@ Change Log
 ##########
 
 - In development.
+  - Stealthy font locking now checks words even when outside the view,
+    so stealthy font locking ensures words are checked.
   - Fix #13, failure to properly generate word-list cache on MS-Windows.
   - Support buffer local word-lists via ``spell-fu-buffer-session-localwords``.
   - Fix faces of overlays (such as ``hl-line-mode``) no longer mask other faces when selecting words to check.

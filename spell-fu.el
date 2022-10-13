@@ -1085,7 +1085,11 @@ Return t if the file was updated."
       (dict-aspell-name (cadr (nth 5 (assoc dict-name ispell-aspell-dictionary-alist))))
       (dict-file (and dict-aspell-name (spell-fu--aspell-find-data-file dict-name)))
       (is-dict-outdated
-        (and has-words-file dict-file (spell-fu--file-is-older words-file dict-file)))
+        (and
+          has-words-file dict-file
+          (spell-fu--file-is-older words-file
+            ;; Chase links is needed as checking the symbolic-link date isn't correct, #31.
+            (file-chase-links dict-file))))
       ;; Return value, failure to run `aspell' leaves this nil.
       (updated nil))
 
@@ -1275,9 +1279,9 @@ Return t if the file was updated."
       (has-dict-personal (and personal-words-file (file-exists-p personal-words-file)))
       (is-dict-outdated
         (and
-          has-words-file
-          has-dict-personal
-          (spell-fu--file-is-older words-file personal-words-file))))
+          has-words-file has-dict-personal
+          ;; Chase links is needed as checking the symbolic-link date isn't correct, #31.
+          (spell-fu--file-is-older words-file (file-chase-links personal-words-file)))))
 
     (when (or (not has-words-file) is-dict-outdated)
 

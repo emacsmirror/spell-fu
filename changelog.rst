@@ -4,6 +4,7 @@ Change Log
 ##########
 
 - In development.
+  - Fix #31, failure to detect updated personal dictionary when it's a symlink.
   - Stealthy font locking now checks words even when outside the view,
     so stealthy font locking ensures words are checked.
   - Fix #13, failure to properly generate word-list cache on MS-Windows.

@@ -268,9 +268,11 @@ already contain WORD."
             ;; Operation supported?
             (get
               dict
-              (if adding
-                'add-word
-                'remove-word))
+              (cond
+                (adding
+                  'add-word)
+                (t
+                  'remove-word)))
             ;; Word is / is not in dictionary?
             (eq adding (null (gethash encoded-word (symbol-value dict))))
             ;; Result.
@@ -280,13 +282,16 @@ already contain WORD."
 (defun spell-fu--read-dictionary (candidate-dicts prompt)
   "Ask the user to select one dictionary from CANDIDATE-DICTS.
 PROMPT is shown to the users completing read."
-  (if (<= (length candidate-dicts) 1)
-    (car candidate-dicts) ; Return the single choice
-    (let
-      (
-        (completion-extra-properties
-          '(:annotation-function (lambda (candidate) (get (intern candidate) 'description)))))
-      (intern (completing-read prompt (mapcar #'symbol-name candidate-dicts))))))
+  (cond
+    ((<= (length candidate-dicts) 1)
+      ;; Return the single choice
+      (car candidate-dicts))
+    (t
+      (let
+        (
+          (completion-extra-properties
+            '(:annotation-function (lambda (candidate) (get (intern candidate) 'description)))))
+        (intern (completing-read prompt (mapcar #'symbol-name candidate-dicts)))))))
 
 
 ;; ---------------------------------------------------------------------------
@@ -1024,13 +1029,15 @@ Return t when the word has been added."
         (spell-fu--get-edit-candidate-dictionaries (spell-fu--word-at-point) 'add)
         "Add to dictionary: ")))
   (let ((word (spell-fu--word-at-point)))
-    (if dict
-      (let ((encoded-word (spell-fu--canonicalize-word word)))
-        (funcall (get dict 'add-word) encoded-word)
-        (puthash encoded-word t (symbol-value dict))
-        t)
-      (message "Cannot add %S to any active dictionary." word)
-      nil)))
+    (cond
+      (dict
+        (let ((encoded-word (spell-fu--canonicalize-word word)))
+          (funcall (get dict 'add-word) encoded-word)
+          (puthash encoded-word t (symbol-value dict))
+          t))
+      (t
+        (message "Cannot add %S to any active dictionary." word)
+        nil))))
 
 (defun spell-fu-word-remove (dict)
   "Remove the current word from the dictionary DICT.
@@ -1042,13 +1049,15 @@ Return t when the word has been removed."
         (spell-fu--get-edit-candidate-dictionaries (spell-fu--word-at-point) 'remove)
         "Remove from dictionary: ")))
   (let ((word (spell-fu--word-at-point)))
-    (if dict
-      (let ((encoded-word (spell-fu--canonicalize-word word)))
-        (funcall (get dict 'remove-word) encoded-word)
-        (remhash encoded-word (symbol-value dict))
-        t)
-      (message "Cannot remove %S from any active dictionary." word)
-      nil)))
+    (cond
+      (dict
+        (let ((encoded-word (spell-fu--canonicalize-word word)))
+          (funcall (get dict 'remove-word) encoded-word)
+          (remhash encoded-word (symbol-value dict))
+          t))
+      (t
+        (message "Cannot remove %S from any active dictionary." word)
+        nil))))
 
 (defun spell-fu-dictionary-add (dict)
   "Add DICT to the list of active dictionaries."

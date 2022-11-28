@@ -70,6 +70,10 @@ Set to 0.0 to highlight immediately (as part of syntax highlighting)."
   "List of major-modes to exclude when `spell-fu' has been enabled globally."
   :type '(repeat symbol))
 
+(defcustom spell-fu-debug nil
+  "Enable debug messages, use for troubleshooting unexpected behavior."
+  :type 'boolean)
+
 (defvar-local spell-fu-buffer-session-localwords nil
   "Optional buffer-local word-list of words.
 This is intended to be set by file-locals or dir-locals.
@@ -176,6 +180,19 @@ Notes:
 ;; so this relies on the lists being shared between buffers (not just matching contents).
 (defvar spell-fu--buffer-localwords-global-cache-table-map nil)
 
+
+;; ---------------------------------------------------------------------------
+;; Internal Macros
+
+;; Developer note, don't use this for logging the checking of individual words,
+;; that is far too verbose, this is mainly for checking why dictionaries aren't
+;; being properly initialized.
+(defmacro spell-fu--debug-message (fmt &rest args)
+  "Debug message logging passing FMT and ARGS to `message'."
+  (when spell-fu-debug
+    `(apply 'message (list (concat "spell-fu-debug: " ,fmt) ,@args))))
+
+
 ;; ---------------------------------------------------------------------------
 ;; Dictionary Utility Functions
 
@@ -185,13 +202,42 @@ Notes:
 
 (defun spell-fu--default-dictionaries ()
   "Construct the default value of `spell-fu-dictionaries'."
-  (nconc
-    (list
-      (spell-fu-get-ispell-dictionary (or ispell-local-dictionary ispell-dictionary "default")))
-    (when (and ispell-personal-dictionary (file-exists-p ispell-personal-dictionary))
-      (list (spell-fu-get-personal-dictionary "default" ispell-personal-dictionary)))
-    (when spell-fu-buffer-session-localwords
-      (list (spell-fu-get-buffer-session-localwords-dictionary)))))
+  (let ((result))
+    ;; Push in reverse order (so first used dictionary is last).
+
+    (cond
+      (spell-fu-buffer-session-localwords
+        (push (spell-fu-get-buffer-session-localwords-dictionary) result)
+        (spell-fu--debug-message
+          "default-dictionary: `spell-fu-buffer-session-localwords' found, using!"))
+      (t
+        (spell-fu--debug-message
+          "default-dictionary: `spell-fu-buffer-session-localwords' not found, skipping!")))
+
+    (cond
+      ((and ispell-personal-dictionary (file-exists-p ispell-personal-dictionary))
+        (push (spell-fu-get-personal-dictionary "default" ispell-personal-dictionary) result)
+        (spell-fu--debug-message
+          "default-dictionary: `ispell-personal-dictionary' found at \"%s\" using!"
+          ispell-personal-dictionary))
+      (t
+        (spell-fu--debug-message
+          "default-dictionary: `ispell-personal-dictionary' not found, skipping!")))
+
+    (let ((dict (or ispell-local-dictionary ispell-dictionary "default")))
+      (push (spell-fu-get-ispell-dictionary dict) result)
+      (spell-fu--debug-message "default-dictionary: name \"%s\" main ispell dictionary!" dict))
+
+    result))
+
+(defun spell-fu--dictionary-ensure-update (dict)
+  "Call DICT update function if it exists."
+  (let ((update-fun (get dict 'update)))
+    (when update-fun
+      (funcall update-fun)
+      (spell-fu--debug-message "updating [%s], found [%d] word(s)"
+        (get dict 'description)
+        (hash-table-size (symbol-value dict))))))
 
 (defun spell-fu--dictionaries-test-any (test-fn)
   "Remove any dictionaries that match TEST-FN."
@@ -1063,9 +1109,7 @@ Return t when the word has been removed."
   "Add DICT to the list of active dictionaries."
   (add-to-list 'spell-fu-dictionaries dict)
   (when (bound-and-true-p spell-fu-mode)
-    (let ((update-fun (get dict 'update)))
-      (when update-fun
-        (funcall update-fun)))
+    (spell-fu--dictionary-ensure-update dict)
     (spell-fu--refresh-cache-table-list)
     (spell-fu--refresh)))
 
@@ -1076,6 +1120,32 @@ Return t when the word has been removed."
     (spell-fu--refresh-cache-table-list)
     (spell-fu--refresh)))
 
+(defun spell-fu-reset ()
+  "Reset spell-fu and it's cache, useful if the cache has somehow become invalid."
+  (interactive)
+  (let ((buffers-in-mode nil))
+    (dolist (buf (buffer-list))
+      (when (buffer-local-value 'spell-fu-mode buf)
+        (push buf buffers-in-mode)))
+
+    (with-demoted-errors "spell-fu-reset: %S"
+      (dolist (buf buffers-in-mode)
+        (with-current-buffer buf (spell-fu-mode-disable))))
+
+    (when (file-directory-p spell-fu-directory)
+      (delete-directory spell-fu-directory t nil))
+
+    (with-demoted-errors "spell-fu-reset: %S"
+      (dolist (buf buffers-in-mode)
+        (with-current-buffer buf (spell-fu-mode-enable))))
+
+    (message
+      "spell-fu: reset complete%s"
+      (cond
+        (buffers-in-mode
+          "")
+        (t
+          " no buffers in spell-fu found, generate cache on next use!")))))
 
 ;; ---------------------------------------------------------------------------
 ;; Ispell / Aspell dictionary support
@@ -1630,6 +1700,8 @@ Argument DICT-FILE is the absolute path to the dictionary."
 (defun spell-fu-mode-enable ()
   "Turn on option `spell-fu-mode' for the current buffer."
 
+  (spell-fu--debug-message "enabling for buffer: %S, major-mode: [%S]" (current-buffer) major-mode)
+
   ;; Set the default dictionaries.
   (unless spell-fu-dictionaries
     (setq spell-fu-dictionaries (spell-fu--default-dictionaries)))
@@ -1640,9 +1712,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
 
   ;; Update dictionaries
   (dolist (dict spell-fu-dictionaries)
-    (let ((update-fun (get dict 'update)))
-      (when update-fun
-        (funcall update-fun))))
+    (spell-fu--dictionary-ensure-update dict))
 
   (spell-fu--refresh-cache-table-list)
 
@@ -1664,6 +1734,9 @@ Argument DICT-FILE is the absolute path to the dictionary."
 
 (defun spell-fu-mode-disable ()
   "Turn off option `spell-fu-mode' for the current buffer."
+
+  (spell-fu--debug-message "disabling mode for buffer %S" (current-buffer))
+
   (kill-local-variable 'spell-fu--cache-table-list)
 
   (cond

@@ -4,6 +4,8 @@ Change Log
 ##########
 
 - In development.
+  - Add ``spell-fu-debug`` variable, to support debugging why dictionaries are not loading.
+  - Add ``spell-fu-reset`` to re-generate cache.
   - Fix #31, failure to detect updated personal dictionary when it's a symlink.
   - Stealthy font locking now checks words even when outside the view,
     so stealthy font locking ensures words are checked.

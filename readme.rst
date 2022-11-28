@@ -99,6 +99,11 @@ Global Settings
 ``global-spell-fu-ignore-modes`` nil
    A list of modes that won't enable spell-checking from ``global-spell-fu-mode``.
 
+``spell-fu-debug`` nil
+   Enable to see additional messages which may help to debug failure to initialize dictionaries.
+
+   After enabling you may want to call the command ``spell-fu-reset``.
+
 
 Buffer Local Settings
 ^^^^^^^^^^^^^^^^^^^^^
@@ -216,6 +221,10 @@ there are some commands provided which may come in handy.
 
 ``spell-fu-word-remove``
    Remove the word under the cursor from a personal dictionary.
+
+``spell-fu-reset``
+   Toggle ``spell-fu`` mode for all buffers and resets cache,
+   use this if you suspect errors relating to invalid cache.
 
 
 Multiple dictionaries

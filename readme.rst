@@ -123,7 +123,10 @@ You may wish to set these values differently based on the current major-mode.
    When not ``nil``, only faces in this list will be checked.
 
 ``spell-fu-faces-exclude``
-   When not ``nil``, text with faces in this list will be excluded.
+   When not ``nil``, text with faces in this list won't be checked.
+
+   Note that you may wish to add faces to this list if keywords or commands are marked as being spelled incorrectly.
+   In this case, the face used by these commands may be added to this list so as to skip them.
 
 ``global-spell-fu-ignore-buffer``
    When not ``nil``, the buffer won't enable spell-checking from ``global-spell-fu-mode``.

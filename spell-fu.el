@@ -137,7 +137,7 @@ use `spell-fu-dictionary-add'.")
   "List of faces to check or nil to include all (used by `spell-fu-check-range').")
 
 (defvar-local spell-fu-faces-exclude nil
-  "List of faces to check or nil to exclude none (used by `spell-fu-check-range').")
+  "List of faces not to check or nil to exclude none (used by `spell-fu-check-range').")
 
 (defvar-local spell-fu-check-range 'spell-fu-check-range-default
   "Function that takes a beginning & end points to check for the current buffer.

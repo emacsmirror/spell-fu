@@ -131,13 +131,16 @@ use `spell-fu-dictionary-add'.")
 ;; - word' <= don't count the final apostrophe.
 ;;   ^^^^
 (defvar-local spell-fu-word-regexp "\\b\\([[:alpha:]]+\\(['\u2019][[:alpha:]]+\\)?\\)\\b"
-  "Regex used to scan for words to check (used by `spell-fu-check-range').")
+  "Regex used to scan for words to check.
+Used by `spell-fu-check-range'.")
 
 (defvar-local spell-fu-faces-include nil
-  "List of faces to check or nil to include all (used by `spell-fu-check-range').")
+  "List of faces to check or nil to include all.
+Used by `spell-fu-check-range'.")
 
 (defvar-local spell-fu-faces-exclude nil
-  "List of faces not to check or nil to exclude none (used by `spell-fu-check-range').")
+  "List of faces not to check or nil to exclude none.
+Used by `spell-fu-check-range'.")
 
 (defvar-local spell-fu-check-range 'spell-fu-check-range-default
   "Function that takes a beginning & end points to check for the current buffer.

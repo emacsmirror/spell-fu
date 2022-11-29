@@ -229,6 +229,8 @@ there are some commands provided which may come in handy.
    Toggle ``spell-fu`` mode for all buffers and resets cache,
    use this if you suspect errors relating to invalid cache.
 
+   This can be useful if you use the ``default`` dictionary, then change the systems locale.
+
 
 Multiple dictionaries
 ---------------------

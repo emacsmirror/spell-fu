@@ -1133,14 +1133,14 @@ Return t when the word has been removed."
 
     (with-demoted-errors "spell-fu-reset: %S"
       (dolist (buf buffers-in-mode)
-        (with-current-buffer buf (spell-fu-mode-disable))))
+        (with-current-buffer buf (spell-fu--mode-disable))))
 
     (when (file-directory-p spell-fu-directory)
       (delete-directory spell-fu-directory t nil))
 
     (with-demoted-errors "spell-fu-reset: %S"
       (dolist (buf buffers-in-mode)
-        (with-current-buffer buf (spell-fu-mode-enable))))
+        (with-current-buffer buf (spell-fu--mode-enable))))
 
     (message
       "spell-fu: reset complete%s"
@@ -1700,7 +1700,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
 ;; Developer note, use global hooks since these run before buffers are loaded.
 ;; Each function checks if the local mode is active before operating.
 
-(defun spell-fu-mode-enable ()
+(defun spell-fu--mode-enable ()
   "Turn on option `spell-fu-mode' for the current buffer."
 
   (spell-fu--debug-message "enabling for buffer: %S, major-mode: [%S]" (current-buffer) major-mode)
@@ -1735,7 +1735,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
     (t
       (spell-fu--idle-enable))))
 
-(defun spell-fu-mode-disable ()
+(defun spell-fu--mode-disable ()
   "Turn off option `spell-fu-mode' for the current buffer."
 
   (spell-fu--debug-message "disabling mode for buffer %S" (current-buffer))
@@ -1755,9 +1755,9 @@ Argument DICT-FILE is the absolute path to the dictionary."
 
   (cond
     (spell-fu-mode
-      (spell-fu-mode-enable))
+      (spell-fu--mode-enable))
     (t
-      (spell-fu-mode-disable))))
+      (spell-fu--mode-disable))))
 
 (defun spell-fu--mode-turn-on ()
   "Enable the option `spell-fu-mode' where possible."

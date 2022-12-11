@@ -351,6 +351,7 @@ PROMPT is shown to the users completing read."
 
 (defmacro spell-fu--with-advice (fn-orig where fn-advice &rest body)
   "Execute BODY with WHERE advice on FN-ORIG temporarily enabled."
+  (declare (indent 3))
   `
   (let ((fn-advice-var ,fn-advice))
     (unwind-protect
@@ -365,8 +366,7 @@ Argument PREFIX is the text to add at the start of the message.
 Optional argument BODY runs with the message prefix."
   (declare (indent 1))
   `
-  (spell-fu--with-advice #'message
-    :around
+  (spell-fu--with-advice #'message :around
     (lambda (fn-orig arg &rest args)
       (apply fn-orig (append (list (concat "%s" arg)) (list ,prefix) args)))
     ,@body))
@@ -377,15 +377,13 @@ Argument DEPTH-OVERRIDE the depth value to call `add-hook' with.
 Optional argument BODY runs with the depth override."
   (declare (indent 1))
   `
-  (spell-fu--with-advice #'add-hook
-    :around
+  (spell-fu--with-advice #'add-hook :around
     (lambda (fn-orig hook function &optional _depth local)
       (funcall fn-orig hook function ,depth-override local))
     ,@body))
 
 (defmacro spell-fu--setq-expand-range-to-line-boundaries (pos-beg pos-end)
   "Set POS-BEG the the line beginning, POS-END to the line end."
-  (declare (indent 1))
   ;; Ignore field boundaries.
   (let ((inhibit-field-text-motion t))
     `
@@ -433,9 +431,7 @@ Argument POS return faces at this point."
 
 (defun spell-fu--next-faces-prop-change (pos limit)
   "Return the next face change from POS restricted by LIMIT."
-  (next-single-property-change
-    pos
-    'read-face-name
+  (next-single-property-change pos 'read-face-name
     nil
     (next-single-property-change pos 'face nil limit)))
 
@@ -1049,8 +1045,7 @@ Return t when found, otherwise nil."
         (goto-char point-found)
         t)
       (t
-        (message
-          "Spell-fu: no %s spelling error found"
+        (message "Spell-fu: no %s spelling error found"
           (cond
             ((< dir 0)
               "previous")
@@ -1133,17 +1128,18 @@ Return t when the word has been removed."
 
     (with-demoted-errors "spell-fu-reset: %S"
       (dolist (buf buffers-in-mode)
-        (with-current-buffer buf (spell-fu--mode-disable))))
+        (with-current-buffer buf
+          (spell-fu--mode-disable))))
 
     (when (file-directory-p spell-fu-directory)
       (delete-directory spell-fu-directory t nil))
 
     (with-demoted-errors "spell-fu-reset: %S"
       (dolist (buf buffers-in-mode)
-        (with-current-buffer buf (spell-fu--mode-enable))))
+        (with-current-buffer buf
+          (spell-fu--mode-enable))))
 
-    (message
-      "spell-fu: reset complete%s"
+    (message "spell-fu: reset complete%s"
       (cond
         (buffers-in-mode
           "")
@@ -1168,7 +1164,8 @@ Return t if the file was updated."
       (dict-file (and dict-aspell-name (spell-fu--aspell-find-data-file dict-name)))
       (is-dict-outdated
         (and
-          has-words-file dict-file
+          has-words-file
+          dict-file
           (spell-fu--file-is-older words-file
             ;; Chase links is needed as checking the symbolic-link date isn't correct, #31.
             (file-chase-links dict-file))))
@@ -1199,8 +1196,7 @@ Return t if the file was updated."
                       (call-process aspell-bin nil t nil "dump" "master")
                       (setq updated t))
                     (error
-                      (message
-                        "failed to run \"aspell\" with default dictionary with error: %s"
+                      (message "failed to run \"aspell\" with default dictionary with error: %s"
                         (error-message-string err)))))
                 (t
                   (condition-case err
@@ -1208,8 +1204,7 @@ Return t if the file was updated."
                       (call-process aspell-bin nil t nil "-d" dict-name "dump" "master")
                       (setq updated t))
                     (error
-                      (message
-                        "failed to run aspell with %S dictionary with error: %s"
+                      (message "failed to run aspell with %S dictionary with error: %s"
                         dict-name
                         (error-message-string err))))))
 
@@ -1219,8 +1214,7 @@ Return t if the file was updated."
                   (let ((lang (spell-fu--aspell-lang-from-dict dict-name)))
                     (unless
                       (zerop
-                        (shell-command-on-region
-                          (point-min) (point-max)
+                        (shell-command-on-region (point-min) (point-max)
                           (cond
                             (lang
                               (format "%s -l %s expand" aspell-bin lang))
@@ -1361,7 +1355,8 @@ Return t if the file was updated."
       (has-dict-personal (and personal-words-file (file-exists-p personal-words-file)))
       (is-dict-outdated
         (and
-          has-words-file has-dict-personal
+          has-words-file
+          has-dict-personal
           ;; Chase links is needed as checking the symbolic-link date isn't correct, #31.
           (spell-fu--file-is-older words-file (file-chase-links personal-words-file)))))
 
@@ -1531,8 +1526,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
             (when header-match
               (save-match-data
                 (set-match-data header-match)
-                (replace-match
-                  (number-to-string (1- (count-lines (point-min) (point-max))))
+                (replace-match (number-to-string (1- (count-lines (point-min) (point-max))))
                   t
                   nil
                   nil
@@ -1625,8 +1619,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
                 (throw 'result nil))
 
               (setq spell-fu-buffer-session-localwords
-                (delete encoded-word
-                  spell-fu-buffer-session-localwords))
+                (delete encoded-word spell-fu-buffer-session-localwords))
               (spell-fu--buffer-localwords-cache-table-update)
 
               (message "\"%s\" successfully removed!" word)
@@ -1783,7 +1776,9 @@ Argument DICT-FILE is the absolute path to the dictionary."
     (spell-fu-mode 1)))
 
 ;;;###autoload
-(define-globalized-minor-mode global-spell-fu-mode spell-fu-mode spell-fu--mode-turn-on)
+(define-globalized-minor-mode global-spell-fu-mode
+  spell-fu-mode
+  spell-fu--mode-turn-on)
 
 (provide 'spell-fu)
 ;;; spell-fu.el ends here

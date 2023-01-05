@@ -873,9 +873,7 @@ when checking the entire buffer for example."
    (state
     (unless spell-fu--global-timer
       (setq spell-fu--global-timer
-            (run-with-idle-timer
-             spell-fu-idle-delay
-             :repeat #'spell-fu--time-callback-or-disable))))
+            (run-with-idle-timer spell-fu-idle-delay :repeat #'spell-fu--time-callback-or-disable))))
    (t
     (when spell-fu--global-timer
       (cancel-timer spell-fu--global-timer)
@@ -1439,8 +1437,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
               (word-point
                (save-match-data
                  (let ((case-fold-search t))
-                   (when (re-search-forward (concat "^" (regexp-quote word) "[[:blank:]]*$")
-                                            nil t)
+                   (when (re-search-forward (concat "^" (regexp-quote word) "[[:blank:]]*$") nil t)
                      (match-beginning 0))))))
 
           (cond

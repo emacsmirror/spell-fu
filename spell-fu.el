@@ -197,7 +197,7 @@ Notes:
   ;; When emacs 28.2 support is dropped,
   ;; this can simply check `spell-fu-debug', see: #36.
   (when (bound-and-true-p spell-fu-debug)
-    `(apply 'message (list (concat "spell-fu-debug: " ,fmt) ,@args))))
+    `(apply #'message (list (concat "spell-fu-debug: " ,fmt) ,@args))))
 
 ;; ---------------------------------------------------------------------------
 ;; Dictionary Utility Functions

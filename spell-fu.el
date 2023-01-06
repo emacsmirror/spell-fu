@@ -21,15 +21,15 @@
 ;; Write the following code to your .emacs file:
 ;;
 ;;   (require 'spell-fu)
-;;   (global-spell-fu-mode-mode)
+;;   (global-spell-fu-mode)
 ;;
 ;; Or with `use-package':
 ;;
 ;;   (use-package spell-fu)
-;;   (global-spell-fu-mode-mode)
+;;   (global-spell-fu-mode)
 ;;
 ;; If you prefer to enable this per-mode, you may do so using
-;; mode hooks instead of calling `global-spell-fu-mode-mode'.
+;; mode hooks instead of calling `global-spell-fu-mode'.
 ;; The following example enables this for org-mode:
 ;;
 ;;   (add-hook 'org-mode-hook

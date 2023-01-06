@@ -32,7 +32,7 @@ You may enable this globally which has the following defaults.
 .. code-block:: elisp
 
    (use-package spell-fu)
-   (global-spell-fu-mode)
+   (spell-fu-global-mode)
 
 Or you may wish to configure this per-mode, e.g:
 
@@ -96,8 +96,8 @@ Global Settings
 ``spell-fu-incorrect-face`` (red, underline)
    The font to use for the spell checking overlay.
 
-``global-spell-fu-ignore-modes`` nil
-   A list of modes that won't enable spell-checking from ``global-spell-fu-mode``.
+``spell-fu-global-ignore-modes`` nil
+   A list of modes that won't enable spell-checking from ``spell-fu-global-mode``.
 
 ``spell-fu-debug`` nil
    Enable to see additional messages which may help to debug failure to initialize dictionaries.
@@ -128,8 +128,8 @@ You may wish to set these values differently based on the current major-mode.
    Note that you may wish to add faces to this list if keywords or commands are marked as being spelled incorrectly.
    In this case, the face used by these commands may be added to this list so as to skip them.
 
-``global-spell-fu-ignore-buffer``
-   When not ``nil``, the buffer won't enable spell-checking from ``global-spell-fu-mode``.
+``spell-fu-global-ignore-buffer``
+   When not ``nil``, the buffer won't enable spell-checking from ``spell-fu-global-mode``.
 
    This may also be a function that takes a single buffer argument,
    where returning ``nil`` will enable spell-checking, anything else will not.
@@ -139,9 +139,9 @@ You may wish to set these values differently based on the current major-mode.
    .. code-block:: elisp
 
       (setq spell-fu-ignore-modes (list 'org-mode))
-      (setq global-spell-fu-ignore-buffer (lambda (buf) (buffer-local-value 'buffer-read-only buf)))
+      (setq spell-fu-global-ignore-buffer (lambda (buf) (buffer-local-value 'buffer-read-only buf)))
 
-      (global-spell-fu-mode)
+      (spell-fu-global-mode)
 
 
 Buffer Local Words

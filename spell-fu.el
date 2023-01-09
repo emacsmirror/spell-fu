@@ -409,13 +409,11 @@ Argument AFTER, ignore when true."
 (defun spell-fu--faces-at-point (pos)
   "Add the named faces that the `read-face-name' or `face' property use.
 Argument POS return faces at this point."
-  (let
-      ( ;; List of faces to return.
-       (faces nil)
-       ;; NOTE: use `get-text-property' instead of `get-char-property' so overlays are excluded,
-       ;; since this causes overlays with `hl-line-mode' (for example) to mask other faces.
-       ;; If we want to include faces of overlays, this could be supported.
-       (faceprop (or (get-text-property pos 'read-face-name) (get-text-property pos 'face))))
+  (let ((faces nil) ; List of faces to return.
+        ;; NOTE: use `get-text-property' instead of `get-char-property' so overlays are excluded,
+        ;; since this causes overlays with `hl-line-mode' (for example) to mask other faces.
+        ;; If we want to include faces of overlays, this could be supported.
+        (faceprop (or (get-text-property pos 'read-face-name) (get-text-property pos 'face))))
     (cond
      ((facep faceprop)
       (push faceprop faces))
@@ -462,13 +460,13 @@ The resulting cache is returned as a minor optimization for first-time loading,
 where we need to create this data in order to write it,
 save some time by not spending time reading it back."
   (message "%S" (file-name-nondirectory cache-file))
-  (let
-      ( ;; The header, an associative list of items.
-       (cache-header (list (cons "version" spell-fu--cache-version)))
-       (word-table nil)
-       ;; Needed for Windows to prevent CRLF including new-lines in strings.
-       (coding-system-for-read 'utf-8-unix)
-       (coding-system-for-write 'utf-8-unix))
+  (let ((cache-header
+         ;; The header, an associative list of items.
+         (list (cons "version" spell-fu--cache-version)))
+        (word-table nil)
+        ;; Needed for Windows to prevent CRLF including new-lines in strings.
+        (coding-system-for-read 'utf-8-unix)
+        (coding-system-for-write 'utf-8-unix))
 
     (with-temp-buffer
       (insert-file-contents-literally words-file)
@@ -624,21 +622,20 @@ Argument POS-END the end position of WORD."
 This only checks the text matching face rules."
   (spell-fu--overlays-remove pos-beg pos-end)
   (with-syntax-table spell-fu-syntax-table
-    (save-match-data ;; For regex search.
-      (save-excursion ;; For moving the point.
-        (save-restriction ;; For narrowing.
+    (save-match-data ; For regex search.
+      (save-excursion ; For moving the point.
+        (save-restriction ; For narrowing.
           ;; Avoid duplicate calls that check if `pos-beg' passes the face test.
           (let ((ok-beg (spell-fu--check-faces-at-point pos-beg)))
             ;; It's possible the face changes part way through the word.
             ;; In practice this is likely caused by escape characters, e.g.
             ;; "test\nthe text" where "\n" may have separate highlighting.
             (while (< pos-beg pos-end)
-              (let*
-                  ( ;; Assign to `ok-beg' next iteration to avoid duplicate checks.
-                   (point-end-iter (spell-fu--next-faces-prop-change pos-beg pos-end))
-                   (ok-end-iter
-                    (and (< point-end-iter pos-end)
-                         (spell-fu--check-faces-at-point point-end-iter))))
+              (let* ((point-end-iter ; Set to `ok-beg' next iteration to avoid duplicate checks.
+                      (spell-fu--next-faces-prop-change pos-beg pos-end))
+                     (ok-end-iter
+                      (and (< point-end-iter pos-end)
+                           (spell-fu--check-faces-at-point point-end-iter))))
 
                 ;; No need to check faces of each word
                 ;; as face-changes are being stepped over.
@@ -743,10 +740,9 @@ when checking the entire buffer for example."
                    ;; It's possible these become invalid while looping over items.
                    (overlay-buffer item-ov))
 
-          (let
-              ( ;; Window clamped range.
-               (pos-beg (max visible-beg (overlay-start item-ov)))
-               (pos-end (min visible-end (overlay-end item-ov))))
+          ;; Window clamped range.
+          (let ((pos-beg (max visible-beg (overlay-start item-ov)))
+                (pos-end (min visible-end (overlay-end item-ov))))
 
             ;; Expand so we don't spell check half a word.
             (spell-fu--setq-expand-range-to-line-boundaries
@@ -866,7 +862,7 @@ when checking the entire buffer for example."
     (cond
      (is-mode-active
       (spell-fu--idle-handle-pending-ranges))
-     (t ;; Cancel the timer until the current buffer uses this mode again.
+     (t ; Cancel the timer until the current buffer uses this mode again.
       (spell-fu--time-ensure nil)))))
 
 (defun spell-fu--time-ensure (state)
@@ -976,12 +972,10 @@ Return t when found, otherwise nil."
   (unless (bound-and-true-p spell-fu-mode)
     (user-error "Spell-fu: enable `spell-fu-mode' before using this command!"))
 
-  (let
-      ( ;; Track the closest point in a given line.
-       (point-found-delta most-positive-fixnum)
-       (point-init (point))
-       (point-prev nil)
-       (point-found nil))
+  (let ((point-found-delta most-positive-fixnum) ; Track the closest point in a given line.
+        (point-init (point))
+        (point-prev nil)
+        (point-found nil))
     (save-excursion
       (while (and (null point-found) (not (equal (point) point-prev)))
         (let ((pos-beg (line-beginning-position))
@@ -1154,10 +1148,9 @@ Return t if the file was updated."
 
           ;; Insert dictionary from aspell.
           (with-temp-buffer
-            (let
-                ( ;; Use the pre-configured aspell binary, or call aspell directly.
-                 (aspell-bin
-                  (or (and ispell-really-aspell ispell-program-name) (executable-find "aspell"))))
+            (let ((aspell-bin
+                   ;; Use the pre-configured aspell binary, or call aspell directly.
+                   (or (and ispell-really-aspell ispell-program-name) (executable-find "aspell"))))
 
               (cond
                ((null aspell-bin)
@@ -1232,13 +1225,12 @@ Return t if the file was updated."
 
 (defun spell-fu--aspell-update (dict dict-name)
   "Set up the Aspell DICT, named DICT-NAME initializing it as necessary."
-  (let
-      ( ;; Get the paths of temporary files, ensure the cache file is
-       ;; newer, otherwise regenerate it.
-       (words-file (spell-fu--words-file dict))
-       (cache-file (spell-fu--cache-file dict))
-       ;; We have to reload the words hash table, if it was not yet loaded.
-       (forced (not (symbol-value dict))))
+  ;; Get the paths of temporary files,
+  ;; ensure the cache file is newer, otherwise regenerate it.
+  (let ((words-file (spell-fu--words-file dict))
+        (cache-file (spell-fu--cache-file dict))
+        ;; We have to reload the words hash table, if it was not yet loaded.
+        (forced (not (symbol-value dict))))
 
     (when (or (spell-fu--aspell-word-list-ensure words-file dict-name) forced)
       ;; Load cache or create it, creating it returns the cache
@@ -1368,13 +1360,12 @@ Return t if the file was updated."
 (defun spell-fu--personal-update (dict dict-file)
   "Set up the personal dictionary DICT, initializing it as necessary.
 Argument DICT-FILE is the absolute path to the dictionary."
-  (let
-      ( ;; Get the paths of temporary files, ensure the cache file is
-       ;; newer, otherwise regenerate it.
-       (words-file (spell-fu--words-file dict))
-       (cache-file (spell-fu--cache-file dict))
-       ;; We have to reload the words hash table, if it was not yet loaded.
-       (forced (not (symbol-value dict))))
+  ;; Get the paths of temporary files,
+  ;; ensure the cache file is newer, otherwise regenerate it.
+  (let ((words-file (spell-fu--words-file dict))
+        (cache-file (spell-fu--cache-file dict))
+        ;; We have to reload the words hash table, if it was not yet loaded.
+        (forced (not (symbol-value dict))))
 
     (when (or (spell-fu--personal-word-list-ensure words-file dict-file) forced)
       ;; Load cache or create it, creating it returns the cache
@@ -1479,7 +1470,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
             (message "\"%s\" successfully removed!" word)
             (setq changed t))
 
-           (t ;; Internal error, should never happen.
+           (t ; Internal error, should never happen.
             (error "Invalid action %S" action)))
 
           (when changed
@@ -1524,14 +1515,13 @@ Argument DICT-FILE is the absolute path to the dictionary."
 
 (defun spell-fu--buffer-localwords-cache-table-update ()
   "Set `spell-fu--buffer-localwords-cache-table' from the local word list."
-  (let
-      ( ;; Reuse the previous table if possible.
-       (word-table
-        (and spell-fu--buffer-localwords-global-cache-table-map
-             (gethash
-              spell-fu-buffer-session-localwords
-              spell-fu--buffer-localwords-global-cache-table-map
-              nil))))
+  (let ((word-table
+         ;; Reuse the previous table if possible.
+         (and spell-fu--buffer-localwords-global-cache-table-map
+              (gethash
+               spell-fu-buffer-session-localwords
+               spell-fu--buffer-localwords-global-cache-table-map
+               nil))))
 
     (unless word-table
       (setq word-table
@@ -1582,7 +1572,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
             (message "\"%s\" successfully removed!" word)
             (setq changed t))
 
-           (t ;; Internal error, should never happen.
+           (t ; Internal error, should never happen.
             (error "Invalid action %S" action)))
 
           (when changed
@@ -1618,14 +1608,14 @@ Argument DICT-FILE is the absolute path to the dictionary."
          (spell-fu--dictionaries-test-any #'spell-fu--buffer-localwords-dictionary-test)))
     (cond
      (spell-fu-buffer-session-localwords
-      (unless has-localwords-dict ;; Add dict.
+      (unless has-localwords-dict ; Add dict.
         (setq spell-fu-dictionaries
               (append
                spell-fu-dictionaries
                (list (spell-fu-get-buffer-session-localwords-dictionary))))
         (setq do-refresh-cache-table-list t)))
      (t
-      (when has-localwords-dict ;; Remove dict.
+      (when has-localwords-dict ; Remove dict.
         (spell-fu--dictionaries-remove-any #'spell-fu--buffer-localwords-dictionary-test)
         (setq do-refresh-cache-table-list t))))
     (cond

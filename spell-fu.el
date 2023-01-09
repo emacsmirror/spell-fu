@@ -1726,4 +1726,8 @@ Argument DICT-FILE is the absolute path to the dictionary."
 (define-obsolete-function-alias 'global-spell-fu-mode #'spell-fu-global-mode "0.4")
 
 (provide 'spell-fu)
+;; Local Variables:
+;; fill-column: 99
+;; indent-tabs-mode: nil
+;; End:
 ;;; spell-fu.el ends here

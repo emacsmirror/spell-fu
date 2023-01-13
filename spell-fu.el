@@ -386,9 +386,9 @@ Optional argument BODY runs with the depth override."
     `(save-excursion
        ;; Extend the ranges to line start/end.
        (goto-char ,pos-end)
-       (setq ,pos-end (line-end-position))
+       (setq ,pos-end (pos-eol))
        (goto-char ,pos-beg)
-       (setq ,pos-beg (line-beginning-position)))))
+       (setq ,pos-beg (pos-bol)))))
 
 (defun spell-fu--buffer-as-line-list (buffer lines)
   "Add lines from BUFFER to LINES, returning the updated LINES."
@@ -396,7 +396,7 @@ Optional argument BODY runs with the depth override."
     (save-excursion
       (goto-char (point-min))
       (while (not (eobp))
-        (push (buffer-substring-no-properties (line-beginning-position) (line-end-position)) lines)
+        (push (buffer-substring-no-properties (pos-bol) (pos-eol)) lines)
         (forward-line 1))))
   lines)
 
@@ -472,7 +472,7 @@ save some time by not spending time reading it back."
       (insert-file-contents-literally words-file)
       (setq word-table (make-hash-table :test #'equal :size (count-lines (point-min) (point-max))))
       (while (not (eobp))
-        (let ((l (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
+        (let ((l (buffer-substring-no-properties (pos-bol) (pos-eol))))
           ;; Value of 't' is just for simplicity, it's no used except for check the item exists.
           (puthash (spell-fu--canonicalize-word l) t word-table)
           (forward-line 1))))
@@ -581,8 +581,8 @@ Argument POS-END the end position of WORD."
 (defun spell-fu--word-at-point ()
   "Return the word at the current point or nil."
   (let ((point-init (point))
-        (pos-beg (line-beginning-position))
-        (pos-end (line-end-position)))
+        (pos-beg (pos-bol))
+        (pos-end (pos-eol)))
     (save-excursion
       (goto-char pos-beg)
       (catch 'result
@@ -978,8 +978,8 @@ Return t when found, otherwise nil."
         (point-found nil))
     (save-excursion
       (while (and (null point-found) (not (equal (point) point-prev)))
-        (let ((pos-beg (line-beginning-position))
-              (pos-end (line-end-position)))
+        (let ((pos-beg (pos-bol))
+              (pos-end (pos-eol)))
 
           (jit-lock-fontify-now pos-beg pos-end)
 
@@ -1333,7 +1333,7 @@ Return t if the file was updated."
               (insert-file-contents personal-words-file)
               (goto-char (point-min))
               (when (looking-at "personal_ws-")
-                (delete-region (line-beginning-position) (1+ (line-end-position))))
+                (delete-region (pos-bol) (1+ (pos-eol))))
               (goto-char (point-max))
               (unless (eq ?\n (char-after))
                 (insert "\n")))
@@ -1396,18 +1396,14 @@ Argument DICT-FILE is the absolute path to the dictionary."
         ;; also ensures we can step past the header which _could_ be a single line
         ;; without anything below it.
         (goto-char (point-max))
-        (unless (string-blank-p
-                 (buffer-substring-no-properties (line-beginning-position) (line-end-position)))
+        (unless (string-blank-p (buffer-substring-no-properties (pos-bol) (pos-eol)))
           (insert "\n"))
         ;; Delete extra blank lines.
         ;; So we can use line count as word count.
         (while (and (zerop (forward-line -1))
-                    (string-blank-p
-                     (buffer-substring-no-properties
-                      (line-beginning-position)
-                      (line-end-position))))
+                    (string-blank-p (buffer-substring-no-properties (pos-bol) (pos-eol))))
           (delete-region
-           (line-beginning-position)
+           (pos-bol)
            (progn
              (forward-line -1)
              (point))))
@@ -1444,11 +1440,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
 
             (let ((keep-searching t))
               (while (and keep-searching
-                          (string-lessp
-                           (buffer-substring-no-properties
-                            (line-beginning-position)
-                            (line-end-position))
-                           word))
+                          (string-lessp (buffer-substring-no-properties (pos-bol) (pos-eol)) word))
                 (setq keep-searching (zerop (forward-line 1)))))
 
             (insert word "\n")
@@ -1463,9 +1455,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
 
             ;; Delete line.
             (goto-char word-point)
-            (delete-region
-             (line-beginning-position)
-             (or (and (zerop (forward-line 1)) (point)) (line-end-position)))
+            (delete-region (pos-bol) (or (and (zerop (forward-line 1)) (point)) (pos-eol)))
 
             (message "\"%s\" successfully removed!" word)
             (setq changed t))

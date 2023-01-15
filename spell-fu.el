@@ -54,13 +54,17 @@
 ;; ---------------------------------------------------------------------------
 ;; Compatibility
 
-(when (version< emacs-version "29.1")
-  (defsubst pos-bol (&optional n)
+(when (and (version< emacs-version "29.1") (not (and (fboundp 'pos-bol) (fboundp 'pos-eol))))
+  (defun pos-bol (&optional n)
     "Return the position at the line beginning."
-    (line-beginning-position n))
-  (defsubst pos-eol (&optional n)
+    (declare (side-effect-free t))
+    (let ((inhibit-field-text-motion t))
+      (line-beginning-position n)))
+  (defun pos-eol (&optional n)
     "Return the position at the line end."
-    (line-end-position n)))
+    (declare (side-effect-free t))
+    (let ((inhibit-field-text-motion t))
+      (line-end-position n))))
 
 
 ;; ---------------------------------------------------------------------------

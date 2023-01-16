@@ -100,9 +100,7 @@ Call `spell-fu-buffer-session-localwords-refresh' after run-time modifications."
 (put 'spell-fu-buffer-session-localwords 'safe-local-variable #'spell-fu-list-of-strings-p)
 
 (define-obsolete-variable-alias
-  'global-spell-fu-ignore-buffer
-  'spell-fu-global-ignore-buffer
-  "0.4")
+  'global-spell-fu-ignore-buffer 'spell-fu-global-ignore-buffer "0.4")
 
 (defvar-local spell-fu-global-ignore-buffer nil
   "When non-nil, the global mode will not be enabled for this buffer.
@@ -451,8 +449,7 @@ Argument POS return faces at this point."
     (let ((file-test-time (file-attribute-modification-time (file-attributes file-test))))
       (dolist (file-new file-list)
         (when (time-less-p
-               file-test-time
-               (file-attribute-modification-time (file-attributes file-new)))
+               file-test-time (file-attribute-modification-time (file-attributes file-new)))
           (throw 'result t)))
       nil)))
 
@@ -680,9 +677,7 @@ This only checks the text matching face rules."
                     (let ((word-beg (match-beginning 0))
                           (word-end (match-end 0)))
                       (spell-fu-check-word
-                       word-beg
-                       word-end
-                       (buffer-substring-no-properties word-beg word-end))))
+                       word-beg word-end (buffer-substring-no-properties word-beg word-end))))
                   (widen))
 
                 (setq pos-beg point-end-iter)
@@ -1052,8 +1047,7 @@ Return t when the word has been added."
   (interactive (list
                 (spell-fu--read-dictionary
                  (spell-fu--get-edit-candidate-dictionaries
-                  (spell-fu--word-at-point)
-                  'add)
+                  (spell-fu--word-at-point) 'add)
                  "Add to dictionary: ")))
   (let ((word (spell-fu--word-at-point)))
     (cond
@@ -1073,8 +1067,7 @@ Return t when the word has been removed."
   (interactive (list
                 (spell-fu--read-dictionary
                  (spell-fu--get-edit-candidate-dictionaries
-                  (spell-fu--word-at-point)
-                  'remove)
+                  (spell-fu--word-at-point) 'remove)
                  "Remove from dictionary: ")))
   (let ((word (spell-fu--word-at-point)))
     (cond
@@ -1208,8 +1201,7 @@ Return t if the file was updated."
                           "*spell-fu word generation errors*"))
                       (message
                        "spell-fu: affix extension for dictionary '%s' failed (with language: %S)."
-                       dict-name
-                       lang))
+                       dict-name lang))
                     (goto-char (point-min))
                     (while (search-forward " " nil t)
                       (replace-match "\n"))))
@@ -1598,9 +1590,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
     ;; Set add/remove functions
     (put dict 'add-word (lambda (word) (spell-fu--buffer-localwords-add-or-remove word 'add)))
     (put
-     dict
-     'remove-word
-     (lambda (word) (spell-fu--buffer-localwords-add-or-remove word 'remove)))
+     dict 'remove-word (lambda (word) (spell-fu--buffer-localwords-add-or-remove word 'remove)))
     dict))
 
 (defun spell-fu--buffer-localwords-dictionary-test (dict)
@@ -1617,8 +1607,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
       (unless has-localwords-dict ; Add dict.
         (setq spell-fu-dictionaries
               (append
-               spell-fu-dictionaries
-               (list (spell-fu-get-buffer-session-localwords-dictionary))))
+               spell-fu-dictionaries (list (spell-fu-get-buffer-session-localwords-dictionary))))
         (setq do-refresh-cache-table-list t)))
      (t
       (when has-localwords-dict ; Remove dict.

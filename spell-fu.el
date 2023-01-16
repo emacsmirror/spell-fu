@@ -1516,10 +1516,9 @@ Argument DICT-FILE is the absolute path to the dictionary."
   (let ((word-table
          ;; Reuse the previous table if possible.
          (and spell-fu--buffer-localwords-global-cache-table-map
-              (gethash
-               spell-fu-buffer-session-localwords
-               spell-fu--buffer-localwords-global-cache-table-map
-               nil))))
+              (gethash spell-fu-buffer-session-localwords
+                       spell-fu--buffer-localwords-global-cache-table-map
+                       nil))))
 
     (unless word-table
       (setq word-table

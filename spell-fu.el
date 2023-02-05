@@ -1422,15 +1422,14 @@ Argument DICT-FILE is the absolute path to the dictionary."
         (let ((changed nil)
               (header-match
                (save-match-data
-                 (when
-                     ;; Match a line like: personal_ws-1.1 en 66
-                     (looking-at
-                      (concat
-                       "personal_ws-[[:digit:]\\.]+"
-                       "[[:blank:]]+"
-                       "[A-Za-z_]+"
-                       "[[:blank:]]+"
-                       "\\([[:digit:]]+\\)"))
+                 ;; Match a line like: personal_ws-1.1 en 66
+                 (when (looking-at
+                        (concat
+                         "personal_ws-[[:digit:]\\.]+"
+                         "[[:blank:]]+"
+                         "[A-Za-z_]+"
+                         "[[:blank:]]+"
+                         "\\([[:digit:]]+\\)"))
                    (forward-line 1)
                    (match-data))))
               (word-point

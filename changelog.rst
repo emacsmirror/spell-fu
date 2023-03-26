@@ -3,6 +3,9 @@
 Change Log
 ##########
 
+- In development
+  - Add support for camel-case word delimiting.
+
 - Version 0.4 (2023-01-06)
   - Rename ``global-spell-fu-mode`` to ``spell-fu-global-mode``,
     ``global-spell-fu-ignore-buffer`` to ``spell-fu-global-ignore-buffer``.

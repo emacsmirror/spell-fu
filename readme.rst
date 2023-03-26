@@ -99,6 +99,16 @@ Global Settings
 ``spell-fu-global-ignore-modes`` nil
    A list of modes that won't enable spell-checking from ``spell-fu-global-mode``.
 
+``spell-fu-word-delimit-camel-case`` nil
+   When non-nil, camel-case delimits words so:
+
+   - ``HelloWorld``
+   - ``helloWORLD``
+   - ``helloWorld``
+   - ``HELLOWorld``
+
+   Are all treated as two separate words ("hello", "world").
+
 ``spell-fu-debug`` nil
    Enable to see additional messages which may help to debug failure to initialize dictionaries.
 

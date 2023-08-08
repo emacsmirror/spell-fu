@@ -379,12 +379,13 @@ PROMPT is shown to the users completing read."
 (defmacro spell-fu--with-advice (fn-orig where fn-advice &rest body)
   "Execute BODY with WHERE advice on FN-ORIG temporarily enabled."
   (declare (indent 3))
-  `(let ((fn-advice-var ,fn-advice))
-     (unwind-protect
-         (progn
-           (advice-add ,fn-orig ,where fn-advice-var)
-           ,@body)
-       (advice-remove ,fn-orig fn-advice-var))))
+  (let ((function-var (gensym)))
+    `(let ((,function-var ,fn-advice))
+       (unwind-protect
+           (progn
+             (advice-add ,fn-orig ,where ,function-var)
+             ,@body)
+         (advice-remove ,fn-orig ,function-var)))))
 
 (defmacro spell-fu--with-message-prefix (prefix &rest body)
   "Add text before the message output.

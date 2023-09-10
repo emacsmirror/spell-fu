@@ -96,7 +96,7 @@ Global Settings
 ``spell-fu-incorrect-face`` (red, underline)
    The font to use for the spell checking overlay.
 
-``spell-fu-global-ignore-modes`` nil
+``spell-fu-ignore-modes`` nil
    A list of modes that won't enable spell-checking from ``spell-fu-global-mode``.
 
 ``spell-fu-word-delimit-camel-case`` nil

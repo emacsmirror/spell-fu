@@ -387,25 +387,45 @@ PROMPT is shown to the users completing read."
 ;; Helpers, not directly related to checking spelling.
 ;;
 
-(defmacro spell-fu--with-advice (fn-orig where fn-advice &rest body)
-  "Execute BODY with WHERE advice on FN-ORIG temporarily enabled."
-  (declare (indent 3))
-  (let ((function-var (gensym)))
-    `(let ((,function-var ,fn-advice))
+(defmacro spell-fu--with-advice (advice &rest body)
+  "Execute BODY with ADVICE temporarily enabled.
+
+Advice are triplets of (SYMBOL HOW FUNCTION),
+see `advice-add' documentation."
+  (declare (indent 1))
+  (let ((body-let nil)
+        (body-advice-add nil)
+        (body-advice-remove nil)
+        (item nil))
+    (while (setq item (pop advice))
+      (let ((fn-sym (gensym))
+            (fn-advise (pop item))
+            (fn-advice-ty (pop item))
+            (fn-body (pop item)))
+        ;; Build the calls for each type.
+        (push (list fn-sym fn-body) body-let)
+        (push (list 'advice-add fn-advise fn-advice-ty fn-sym) body-advice-add)
+        (push (list 'advice-remove fn-advise fn-sym) body-advice-remove)))
+    (setq body-let (nreverse body-let))
+    (setq body-advice-add (nreverse body-advice-add))
+    ;; Compose the call.
+    `(let ,body-let
        (unwind-protect
            (progn
-             (advice-add ,fn-orig ,where ,function-var)
+             ,@body-advice-add
              ,@body)
-         (advice-remove ,fn-orig ,function-var)))))
+         ,@body-advice-remove))))
 
 (defmacro spell-fu--with-message-prefix (prefix &rest body)
   "Add text before the message output.
 Argument PREFIX is the text to add at the start of the message.
 Optional argument BODY runs with the message prefix."
   (declare (indent 1))
-  `(spell-fu--with-advice #'message :around
-                          (lambda (fn-orig arg &rest args)
-                            (apply fn-orig (append (list (concat "%s" arg)) (list ,prefix) args)))
+  `(spell-fu--with-advice ((#'message
+                            :around
+                            (lambda (fn-orig arg &rest args)
+                              (apply fn-orig
+                                     (append (list (concat "%s" arg)) (list ,prefix) args)))))
      ,@body))
 
 (defmacro spell-fu--with-add-hook-depth-override (depth-override &rest body)
@@ -413,9 +433,10 @@ Optional argument BODY runs with the message prefix."
 Argument DEPTH-OVERRIDE the depth value to call `add-hook' with.
 Optional argument BODY runs with the depth override."
   (declare (indent 1))
-  `(spell-fu--with-advice #'add-hook :around
-                          (lambda (fn-orig hook function &optional _depth local)
-                            (funcall fn-orig hook function ,depth-override local))
+  `(spell-fu--with-advice ((#'add-hook
+                            :around
+                            (lambda (fn-orig hook function &optional _depth local)
+                              (funcall fn-orig hook function ,depth-override local))))
      ,@body))
 
 (defmacro spell-fu--setq-expand-range-to-line-boundaries (pos-beg pos-end)

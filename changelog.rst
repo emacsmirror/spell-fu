@@ -4,6 +4,7 @@ Change Log
 ##########
 
 - In development
+  - Add support for matching against inherited faces.
   - Add support for camel-case word delimiting.
 
 - Version 0.4 (2023-01-06)

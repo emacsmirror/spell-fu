@@ -478,23 +478,40 @@ Argument AFTER, ignore when true."
   (unless after
     (delete-overlay overlay)))
 
+(defun spell-fu--faces-as-normalized-list (faceprop)
+  "Return FACEPROP as a list of `facep' faces."
+  (cond
+   ((facep faceprop)
+    (list faceprop))
+   ((listp faceprop)
+    (cond
+     ((face-list-p faceprop)
+      (let ((faces nil))
+        (dolist (face faceprop)
+          (when (facep face)
+            (push face faces)))
+        faces))
+     (t
+      (let ((faces nil) ; May be left empty.
+            (faceprop-inherit (plist-get faceprop :inherit)))
+        (when faceprop-inherit
+          (setq faces (spell-fu--faces-as-normalized-list faceprop-inherit)))
+        faces))))
+   ;; No faces.
+   (t
+    nil)))
+
 (defun spell-fu--faces-at-point (pos)
   "Add the named faces that the `read-face-name' or `face' property use.
 Argument POS return faces at this point."
   (declare (important-return-value t))
-  (let ((faces nil) ; List of faces to return.
-        ;; NOTE: use `get-text-property' instead of `get-char-property' so overlays are excluded,
-        ;; since this causes overlays with `hl-line-mode' (for example) to mask other faces.
-        ;; If we want to include faces of overlays, this could be supported.
-        (faceprop (or (get-text-property pos 'read-face-name) (get-text-property pos 'face))))
-    (cond
-     ((facep faceprop)
-      (push faceprop faces))
-     ((face-list-p faceprop)
-      (dolist (face faceprop)
-        (when (facep face)
-          (push face faces)))))
-    faces))
+  ;; NOTE: use `get-text-property' instead of `get-char-property' so overlays are excluded,
+  ;; since this causes overlays with `hl-line-mode' (for example) to mask other faces.
+  ;; If we want to include faces of overlays, this could be supported.
+  (let ((faceprop (or (get-text-property pos 'read-face-name) (get-text-property pos 'face))))
+    (when faceprop
+      ; List of faces to return.
+      (spell-fu--faces-as-normalized-list faceprop))))
 
 (defun spell-fu--next-faces-prop-change (pos limit)
   "Return the next face change from POS restricted by LIMIT."

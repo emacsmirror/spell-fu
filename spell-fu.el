@@ -270,9 +270,9 @@ Notes:
 (defun spell-fu--dictionary-ensure-update (dict)
   "Call DICT update function if it exists."
   (declare (important-return-value nil))
-  (let ((update-fun (get dict 'update)))
-    (when update-fun
-      (funcall update-fun)
+  (let ((update-fn (get dict 'update)))
+    (when update-fn
+      (funcall update-fn)
       (spell-fu--debug-message "updating [%s], found [%d] word(s)"
                                (get dict 'description)
                                (hash-table-size (symbol-value dict))))))

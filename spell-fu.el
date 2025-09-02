@@ -1555,7 +1555,7 @@ Return t if the file was updated."
             (when has-dict-personal
               (insert-file-contents personal-words-file)
               (goto-char (point-min))
-              (when (looking-at "personal_ws-")
+              (when (looking-at-p "personal_ws-")
                 (delete-region (pos-bol) (1+ (pos-eol))))
               (goto-char (point-max))
               (unless (eq ?\n (char-after))

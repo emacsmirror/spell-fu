@@ -645,7 +645,7 @@ Arguments WORD-LOCASE & WORD-UPCASE are simply to avoid extra computation."
          ;; Build list in reverse so it's ordered from first to last.
          (result nil))
     (while (not (zerop i))
-      (setq i (1- i))
+      (decf i)
       (let* ((ch-nat (aref word i))
              (ch-locase (aref word-locase i))
              (ch-upcase (aref word-upcase i))
@@ -1166,7 +1166,7 @@ The VERBOSE argument reports the findings."
     (let ((count 0))
       (dolist (item-ov (overlays-in pos-beg pos-end))
         (when (overlay-get item-ov 'spell-fu-mode)
-          (setq count (1+ count))))
+          (incf count)))
       (message "Spell-fu: %d misspelled word(s) found!" count))))
 
 

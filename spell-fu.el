@@ -8,7 +8,7 @@
 ;; URL: https://codeberg.org/ideasman42/emacs-spell-fu
 ;; Keywords: convenience
 ;; Version: 0.3
-;; Package-Requires: ((emacs "26.2"))
+;; Package-Requires: ((emacs "29.1"))
 
 ;;; Commentary:
 
@@ -53,18 +53,6 @@
 
 ;; ---------------------------------------------------------------------------
 ;; Compatibility
-
-(when (and (version< emacs-version "29.1") (not (and (fboundp 'pos-bol) (fboundp 'pos-eol))))
-  (defun pos-bol (&optional n)
-    "Return the position at the line beginning."
-    (declare (important-return-value nil) (side-effect-free t))
-    (let ((inhibit-field-text-motion t))
-      (line-beginning-position n)))
-  (defun pos-eol (&optional n)
-    "Return the position at the line end."
-    (declare (important-return-value nil) (side-effect-free t))
-    (let ((inhibit-field-text-motion t))
-      (line-end-position n))))
 
 (when (and (version< emacs-version "31.1") (not (and (fboundp 'incf) (fboundp 'decf))))
   (defmacro incf (place &optional delta)

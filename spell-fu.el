@@ -54,7 +54,7 @@
 ;; ---------------------------------------------------------------------------
 ;; Compatibility
 
-(when (and (version< emacs-version "31.1") (not (and (fboundp 'incf) (fboundp 'decf))))
+(when (version< emacs-version "31.1")
   (defmacro incf (place &optional delta)
     "Increment PLACE by DELTA or 1."
     (declare (debug (gv-place &optional form)))

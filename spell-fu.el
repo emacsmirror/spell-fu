@@ -54,17 +54,18 @@
 ;; ---------------------------------------------------------------------------
 ;; Compatibility
 
-(when (version< emacs-version "31.1")
-  (defmacro incf (place &optional delta)
-    "Increment PLACE by DELTA or 1."
-    (declare (debug (gv-place &optional form)))
-    (gv-letplace (getter setter) place
-      (funcall setter `(+ ,getter ,(or delta 1)))))
-  (defmacro decf (place &optional delta)
-    "Decrement PLACE by DELTA or 1."
-    (declare (debug (gv-place &optional form)))
-    (gv-letplace (getter setter) place
-      (funcall setter `(- ,getter ,(or delta 1))))))
+(eval-when-compile
+  (when (version< emacs-version "31.1")
+    (defmacro incf (place &optional delta)
+      "Increment PLACE by DELTA or 1."
+      (declare (debug (gv-place &optional form)))
+      (gv-letplace (getter setter) place
+        (funcall setter `(+ ,getter ,(or delta 1)))))
+    (defmacro decf (place &optional delta)
+      "Decrement PLACE by DELTA or 1."
+      (declare (debug (gv-place &optional form)))
+      (gv-letplace (getter setter) place
+        (funcall setter `(- ,getter ,(or delta 1)))))))
 
 
 ;; ---------------------------------------------------------------------------

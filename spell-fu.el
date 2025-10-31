@@ -136,7 +136,8 @@ use `spell-fu-dictionary-add'.")
 (defface spell-fu-incorrect-face
   '((((supports :underline (:style wave))) :underline (:style wave :color "red"))
     (t :underline t :inherit error))
-  "Face for incorrect spelling.")
+  "Face for incorrect spelling."
+  :group 'spell-fu)
 
 ;; See '-' as a word boundary \b, so 'full-screen' is detected as two words.
 (defvar-local spell-fu-syntax-table

@@ -468,7 +468,7 @@ Optional argument BODY runs with the depth override."
   (with-current-buffer buffer
     (save-excursion
       (goto-char (point-min))
-      (while (not (eobp))
+      (while (null (eobp))
         (push (buffer-substring-no-properties (pos-bol) (pos-eol)) lines)
         (forward-line 1))))
   lines)
@@ -543,7 +543,7 @@ Argument POS return faces at this point."
 (defun spell-fu-list-of-strings-p (obj)
   "Return t when OBJ is a list of strings."
   (declare (important-return-value t))
-  (and (listp obj) (not (memq nil (mapcar #'stringp obj)))))
+  (and (listp obj) (null (memq nil (mapcar #'stringp obj)))))
 
 ;; ---------------------------------------------------------------------------
 ;; Word List Cache
@@ -567,7 +567,7 @@ save some time by not spending time reading it back."
     (with-temp-buffer
       (insert-file-contents-literally words-file)
       (setq word-table (make-hash-table :test #'equal :size (count-lines (point-min) (point-max))))
-      (while (not (eobp))
+      (while (null (eobp))
         (let ((l (buffer-substring-no-properties (pos-bol) (pos-eol))))
           ;; Value of 't' is just for simplicity, it's no used except for check the item exists.
           (puthash (spell-fu--canonicalize-word l) t word-table)
@@ -646,12 +646,12 @@ Arguments WORD-LOCASE & WORD-UPCASE are simply to avoid extra computation."
          (i word-length)
          ;; Build list in reverse so it's ordered from first to last.
          (result nil))
-    (while (not (zerop i))
+    (while (null (zerop i))
       (decf i)
       (let* ((ch-nat (aref word i))
              (ch-locase (aref word-locase i))
              (ch-upcase (aref word-upcase i))
-             (is-caps (not (eq ch-nat ch-locase))))
+             (is-caps (null (eq ch-nat ch-locase))))
 
         (cond
          ;; Ignore punctuation (typically apostrophe).
@@ -663,11 +663,11 @@ Arguments WORD-LOCASE & WORD-UPCASE are simply to avoid extra computation."
           (cond
            (was-ignore
             (setq was-ignore nil))
-           ((and is-caps (not was-caps))
+           ((and is-caps (null was-caps))
             (when (< i i-prev)
               (push (cons i i-prev) result)
               (setq i-prev i)))
-           ((and was-caps (not is-caps))
+           ((and was-caps (null is-caps))
             (let ((i-ofs (1+ i)))
               (when (< i-ofs i-prev)
                 (push (cons i-ofs i-prev) result)
@@ -979,7 +979,7 @@ when checking the entire buffer for example."
 (defun spell-fu--idle-font-lock-region-pending (pos-beg pos-end)
   "Track the range to spell check, adding POS-BEG & POS-END to the queue."
   (declare (important-return-value nil))
-  (when (and spell-fu--idle-overlay-last (not (overlay-buffer spell-fu--idle-overlay-last)))
+  (when (and spell-fu--idle-overlay-last (null (overlay-buffer spell-fu--idle-overlay-last)))
     (setq spell-fu--idle-overlay-last nil))
 
   (unless (and spell-fu--idle-overlay-last
@@ -1192,7 +1192,7 @@ Return t when found, otherwise nil."
         (point-prev nil)
         (point-found nil))
     (save-excursion
-      (while (and (null point-found) (not (equal (point) point-prev)))
+      (while (and (null point-found) (null (equal (point) point-prev)))
         (let ((pos-beg (pos-bol))
               (pos-end (pos-eol)))
 
@@ -1359,7 +1359,7 @@ Return t if the file was updated."
          ;; Return value, failure to run `aspell' leaves this nil.
          (updated nil))
 
-    (when (or (not has-words-file) is-dict-outdated)
+    (when (or (null has-words-file) is-dict-outdated)
 
       (spell-fu--with-message-prefix "Spell-fu generating words: "
         (message "%S" (file-name-nondirectory words-file))
@@ -1451,7 +1451,7 @@ Return t if the file was updated."
   (let ((words-file (spell-fu--words-file dict))
         (cache-file (spell-fu--cache-file dict))
         ;; We have to reload the words hash table, if it was not yet loaded.
-        (forced (not (symbol-value dict))))
+        (forced (null (symbol-value dict))))
 
     (when (or (spell-fu--aspell-word-list-ensure words-file dict-name) forced)
       ;; Load cache or create it, creating it returns the cache
@@ -1459,7 +1459,7 @@ Return t if the file was updated."
       (set
        dict
        (or (and (file-exists-p cache-file)
-                (not (spell-fu--file-is-older cache-file words-file))
+                (null (spell-fu--file-is-older cache-file words-file))
                 (spell-fu--cache-words-load cache-file))
            (spell-fu--cache-from-word-list words-file cache-file))))))
 
@@ -1544,7 +1544,7 @@ Return t if the file was updated."
                ;; Chase links is needed as checking the symbolic-link date isn't correct, #31.
                (spell-fu--file-is-older words-file (file-chase-links personal-words-file)))))
 
-    (when (or (not has-words-file) is-dict-outdated)
+    (when (or (null has-words-file) is-dict-outdated)
 
       (spell-fu--with-message-prefix "Spell-fu generating words: "
         (message "%S" (file-name-nondirectory words-file))
@@ -1591,7 +1591,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
   (let ((words-file (spell-fu--words-file dict))
         (cache-file (spell-fu--cache-file dict))
         ;; We have to reload the words hash table, if it was not yet loaded.
-        (forced (not (symbol-value dict))))
+        (forced (null (symbol-value dict))))
 
     (when (or (spell-fu--personal-word-list-ensure words-file dict-file) forced)
       ;; Load cache or create it, creating it returns the cache
@@ -1599,7 +1599,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
       (set
        dict
        (or (and (file-exists-p cache-file)
-                (not (spell-fu--file-is-older cache-file words-file))
+                (null (spell-fu--file-is-older cache-file words-file))
                 (spell-fu--cache-words-load cache-file))
            (spell-fu--cache-from-word-list words-file cache-file))))))
 
@@ -1923,19 +1923,19 @@ Argument DICT-FILE is the absolute path to the dictionary."
   (declare (important-return-value nil))
   (when (and
          ;; Not already enabled.
-         (not spell-fu-mode)
+         (null spell-fu-mode)
          ;; Not in the mini-buffer.
-         (not (minibufferp))
+         (null (minibufferp))
          ;; Not a special mode (package list, tabulated data ... etc)
          ;; Instead the buffer is likely derived from `text-mode' or `prog-mode'.
-         (not (derived-mode-p 'special-mode))
+         (null (derived-mode-p 'special-mode))
          ;; Not explicitly ignored.
-         (not (memq major-mode spell-fu-ignore-modes))
+         (null (memq major-mode spell-fu-ignore-modes))
          ;; Optionally check if a function is used.
          (or (null spell-fu-global-ignore-buffer)
              (cond
               ((functionp spell-fu-global-ignore-buffer)
-               (not (funcall spell-fu-global-ignore-buffer (current-buffer))))
+               (null (funcall spell-fu-global-ignore-buffer (current-buffer))))
               (t
                nil))))
     (spell-fu-mode 1)))

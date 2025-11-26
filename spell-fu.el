@@ -1923,7 +1923,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
   (declare (important-return-value nil))
   (when (and
          ;; Not already enabled.
-         (null spell-fu-mode)
+         (not spell-fu-mode)
          ;; Not in the mini-buffer.
          (null (minibufferp))
          ;; Not a special mode (package list, tabulated data ... etc)

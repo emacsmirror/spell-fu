@@ -998,7 +998,7 @@ when checking the entire buffer for example."
       ;; Handy for debugging pending regions to be checked.
       ;; (overlay-put item-ov 'face '(:background "#000000" :extend t))
       (overlay-put item-ov 'spell-fu-pending t)
-      (overlay-put item-ov 'evaporate 't)
+      (overlay-put item-ov 'evaporate t)
       (setq spell-fu--idle-overlay-last item-ov)))
 
   ;; Use `inhibit-quit' as a way to check if `jit-lock-stealth' is in use.

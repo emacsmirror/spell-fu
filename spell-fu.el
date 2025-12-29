@@ -301,9 +301,9 @@ Notes:
           (lambda (dict)
             (cond
              ((funcall test-fn dict)
-              dict)
+              nil)
              (t
-              nil)))
+              dict)))
           spell-fu-dictionaries))))
 
 (defun spell-fu--cache-file (dict)

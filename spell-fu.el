@@ -951,12 +951,11 @@ when checking the entire buffer for example."
                         (funcall spell-fu-check-range pos-beg pos-end)
                         t)
                     (error
-                     (progn
-                       ;; Keep since this should be very rare.
-                       (message "Early exit 'spell-fu-mode': %s" (error-message-string err))
-                       ;; Break out of the loop.
-                       (setq overlays-in-view nil)
-                       nil)))
+                     ;; Keep since this should be very rare.
+                     (message "Early exit 'spell-fu-mode': %s" (error-message-string err))
+                     ;; Break out of the loop.
+                     (setq overlays-in-view nil)
+                     nil))
 
               ;; Don't delete the overlay since it may extend outside the window bounds,
               ;; always delete the range instead.

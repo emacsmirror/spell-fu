@@ -713,9 +713,9 @@ Otherwise remove all overlays."
   (let ((item-ov (make-overlay pos-beg pos-end)))
     (overlay-put item-ov 'spell-fu-mode t)
     (overlay-put item-ov 'face 'spell-fu-incorrect-face)
-    (overlay-put item-ov 'modification-hooks 'spell-fu--removed-changed-overlay)
-    (overlay-put item-ov 'insert-in-front-hooks 'spell-fu--removed-changed-overlay)
-    (overlay-put item-ov 'insert-behind-hooks 'spell-fu--removed-changed-overlay)
+    (overlay-put item-ov 'modification-hooks '(spell-fu--removed-changed-overlay))
+    (overlay-put item-ov 'insert-in-front-hooks '(spell-fu--removed-changed-overlay))
+    (overlay-put item-ov 'insert-behind-hooks '(spell-fu--removed-changed-overlay))
     (overlay-put item-ov 'evaporate t)
     item-ov))
 

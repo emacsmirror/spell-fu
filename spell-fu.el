@@ -1245,47 +1245,53 @@ Return t when found, otherwise nil."
   (interactive)
   (spell-fu--goto-next-or-previous-error -1))
 
-(defun spell-fu-word-add (dict)
+(defun spell-fu-word-add (dict &optional word)
   "Add the current word to the dictionary DICT.
 
-Return t when the word has been added."
+Return t when the word has been added.
+WORD defaults to the word at point if not provided."
   (declare (important-return-value nil))
-  (interactive (list
-                (spell-fu--read-dictionary
-                 (spell-fu--get-edit-candidate-dictionaries
-                  (spell-fu--word-at-point) 'add)
-                 "Add to dictionary: ")))
-  (let ((word (spell-fu--word-at-point)))
-    (cond
-     (dict
-      (let ((encoded-word (spell-fu--canonicalize-word word)))
-        (funcall (get dict 'add-word) encoded-word)
-        (puthash encoded-word t (symbol-value dict))
-        t))
-     (t
-      (message "Cannot add %S to any active dictionary." word)
-      nil))))
+  (interactive (let ((w (spell-fu--word-at-point)))
+                 (list
+                  (spell-fu--read-dictionary
+                   (spell-fu--get-edit-candidate-dictionaries w 'add) "Add to dictionary: ")
+                  w)))
+  (unless word
+    (setq word (spell-fu--word-at-point)))
+  (cond
+   (dict
+    (let ((encoded-word (spell-fu--canonicalize-word word)))
+      (funcall (get dict 'add-word) encoded-word)
+      (puthash encoded-word t (symbol-value dict))
+      t))
+   (t
+    (message "Cannot add %S to any active dictionary." word)
+    nil)))
 
-(defun spell-fu-word-remove (dict)
+(defun spell-fu-word-remove (dict &optional word)
   "Remove the current word from the dictionary DICT.
 
-Return t when the word has been removed."
+Return t when the word has been removed.
+WORD defaults to the word at point if not provided."
   (declare (important-return-value nil))
-  (interactive (list
-                (spell-fu--read-dictionary
-                 (spell-fu--get-edit-candidate-dictionaries
-                  (spell-fu--word-at-point) 'remove)
-                 "Remove from dictionary: ")))
-  (let ((word (spell-fu--word-at-point)))
-    (cond
-     (dict
-      (let ((encoded-word (spell-fu--canonicalize-word word)))
-        (funcall (get dict 'remove-word) encoded-word)
-        (remhash encoded-word (symbol-value dict))
-        t))
-     (t
-      (message "Cannot remove %S from any active dictionary." word)
-      nil))))
+  (interactive (let ((w (spell-fu--word-at-point)))
+                 (list
+                  (spell-fu--read-dictionary
+                   (spell-fu--get-edit-candidate-dictionaries
+                    w 'remove)
+                   "Remove from dictionary: ")
+                  w)))
+  (unless word
+    (setq word (spell-fu--word-at-point)))
+  (cond
+   (dict
+    (let ((encoded-word (spell-fu--canonicalize-word word)))
+      (funcall (get dict 'remove-word) encoded-word)
+      (remhash encoded-word (symbol-value dict))
+      t))
+   (t
+    (message "Cannot remove %S from any active dictionary." word)
+    nil)))
 
 (defun spell-fu-dictionary-add (dict)
   "Add DICT to the list of active dictionaries."

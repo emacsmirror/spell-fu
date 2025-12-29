@@ -197,7 +197,7 @@ Notes:
 ;; Always check this has not been deleted (has a valid buffer) before use.
 (defvar-local spell-fu--idle-overlay-last nil)
 
-;; Cache the result of: `(mapcar (lambda (dict) (symbol-value dict)) spell-fu-dictionaries)'
+;; Cache the result of: `(mapcar #'symbol-value spell-fu-dictionaries)'
 (defvar-local spell-fu--cache-table-list nil)
 
 ;; The buffer local dictionary generated from `spell-fu-buffer-session-localwords'.
@@ -319,8 +319,7 @@ Notes:
 (defun spell-fu--refresh-cache-table-list ()
   "Refresh internal list `spell-fu--cache-table-list'."
   (declare (important-return-value nil))
-  (setq spell-fu--cache-table-list
-        (mapcar (lambda (dict) (symbol-value dict)) spell-fu-dictionaries)))
+  (setq spell-fu--cache-table-list (mapcar #'symbol-value spell-fu-dictionaries)))
 
 (defun spell-fu--refresh ()
   "Reset spell-checked overlays in the current buffer."

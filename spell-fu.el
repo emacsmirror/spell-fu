@@ -280,7 +280,7 @@ Notes:
                                (hash-table-size (symbol-value dict))))))
 
 (defun spell-fu--dictionaries-test-any (test-fn)
-  "Remove any dictionaries that match TEST-FN."
+  "Return non-nil if any dictionaries match TEST-FN."
   (declare (important-return-value t))
   (let ((result nil))
     (let ((dict-list spell-fu-dictionaries))
@@ -292,7 +292,7 @@ Notes:
     result))
 
 (defun spell-fu--dictionaries-remove-any (test-fn)
-  "Return non-nil if any dictionaries match TEST-FN."
+  "Remove any dictionaries that match TEST-FN."
   (declare (important-return-value nil))
   (setq spell-fu-dictionaries
         (remq

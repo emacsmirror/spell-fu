@@ -452,10 +452,9 @@ Optional argument BODY runs with the depth override."
      ,@body))
 
 (defmacro spell-fu--setq-expand-range-to-line-boundaries (pos-beg pos-end)
-  "Set POS-BEG the the line beginning, POS-END to the line end."
-  ;; Ignore field boundaries.
-  (let ((inhibit-field-text-motion t))
-    `(save-excursion
+  "Set POS-BEG to the line beginning, POS-END to the line end."
+  `(let ((inhibit-field-text-motion t))
+     (save-excursion
        ;; Extend the ranges to line start/end.
        (goto-char ,pos-end)
        (setq ,pos-end (pos-eol))

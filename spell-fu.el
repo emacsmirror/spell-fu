@@ -15,7 +15,7 @@
 ;; This package checks the spelling of on-screen text.
 ;;
 
-;;; Usage
+;;; Usage:
 
 ;;
 ;; Write the following code to your .emacs file:
@@ -91,7 +91,7 @@ Set to 0.0 to highlight immediately (as part of syntax highlighting)."
 (defcustom spell-fu-word-delimit-camel-case nil
   "Support camel-case for delimiting word boundaries.
 
-So `HelloWorld' would be checked a two words instead of one.
+So `HelloWorld' would be checked as two words instead of one.
 This is performed as an additional check for words that would
 otherwise be marked as incorrect."
   :type 'boolean)
@@ -179,7 +179,7 @@ over which words are being checked.
 
 Notes:
 
-- The ranges passed in a guaranteed to be on line boundaries.
+- The ranges passed in are guaranteed to be on line boundaries.
 - Calling `spell-fu-check-word' on each word.
 
 - You may explicitly mark a range as incorrect using
@@ -200,7 +200,7 @@ Notes:
 ;; Cache the result of: `(mapcar #'symbol-value spell-fu-dictionaries)'
 (defvar-local spell-fu--cache-table-list nil)
 
-;; The buffer local dictionary generated from `spell-fu-buffer-session-localwords'.
+;; The buffer-local dictionary generated from `spell-fu-buffer-session-localwords'.
 (defvar-local spell-fu--buffer-localwords-cache-table nil)
 
 ;; Map `spell-fu-buffer-session-localwords' identity to existing
@@ -230,7 +230,7 @@ Notes:
 ;; Dictionary Utility Functions
 
 (defsubst spell-fu--canonicalize-word-downcase (word)
-  "Return lowercase UTF-8 encoded WORD (must already be `downcase')."
+  "Return lowercase UTF-8 encoded WORD (must already be lowercase)."
   (encode-coding-string word 'utf-8))
 
 (defsubst spell-fu--canonicalize-word (word)
@@ -307,12 +307,12 @@ Notes:
           spell-fu-dictionaries))))
 
 (defun spell-fu--cache-file (dict)
-  "Return the location of the cache file with dictionary DICT."
+  "Return the location of the cache file for dictionary DICT."
   (declare (important-return-value t))
   (expand-file-name (format "words_%s.el.data" (symbol-name dict)) spell-fu-directory))
 
 (defun spell-fu--words-file (dict)
-  "Return the location of the word-list with dictionary DICT."
+  "Return the location of the word-list for dictionary DICT."
   (declare (important-return-value t))
   (expand-file-name (format "words_%s.txt" (symbol-name dict)) spell-fu-directory))
 
@@ -341,7 +341,7 @@ Notes:
         (spell-fu--refresh)))))
 
 (defun spell-fu--get-edit-candidate-dictionaries (word action)
-  "Return dictionaries for which it make sense to perform ACTION on WORD.
+  "Return dictionaries for which it makes sense to perform ACTION on WORD.
 
 ACTION is `'remove' or `'add'.  Returned candidates are dictionaries
 which support the operation, and correspondingly do / do not
@@ -567,11 +567,11 @@ save some time by not spending time reading it back."
       (setq word-table (make-hash-table :test #'equal :size (count-lines (point-min) (point-max))))
       (while (null (eobp))
         (let ((l (buffer-substring-no-properties (pos-bol) (pos-eol))))
-          ;; Value of 't' is just for simplicity, it's no used except for check the item exists.
+          ;; Value of 't' is just for simplicity, it's not used except to check the item exists.
           (puthash (spell-fu--canonicalize-word l) t word-table)
           (forward-line 1))))
 
-    ;; Write write it to a file.
+    ;; Write it to a file.
     (with-temp-buffer
       (prin1 cache-header (current-buffer))
       (prin1 word-table (current-buffer))
@@ -786,10 +786,10 @@ Argument POS-END the end position of WORD."
 ;; ---------------------------------------------------------------------------
 ;; Range Checking Commands
 ;;
-;; These functions are value values for the `spell-fu-check-range' buffer local variable.
+;; These functions are valid values for the `spell-fu-check-range' buffer-local variable.
 ;;
-;; Note that the callers of these function extends the range to line delimiters,
-;; to ensure there no chance of the points being in the middle of a word.
+;; Note that the callers of these functions extend the range to line delimiters,
+;; to ensure there is no chance of the points being in the middle of a word.
 ;;
 
 (defun spell-fu--check-faces-at-point (pos)
@@ -1008,15 +1008,15 @@ when checking the entire buffer for example."
 ;; This works as follows:
 ;;
 ;; - The timer is kept active as long as the local mode is enabled.
-;; - Entering a buffer runs the buffer local `window-state-change-hook'
+;; - Entering a buffer runs the buffer-local `window-state-change-hook'
 ;;   immediately which checks if the mode is enabled,
 ;;   set up the global timer if it is.
-;; - Switching any other buffer wont run this hook,
-;;   rely on the idle timer it's self running, which detects the active mode,
-;;   canceling it's self if the mode isn't active.
+;; - Switching to any other buffer won't run this hook;
+;;   we rely on the idle timer itself running, which detects the active mode,
+;;   canceling itself if the mode isn't active.
 ;;
 ;; This is a reliable way of using a global,
-;; repeating idle timer that is effectively buffer local.
+;; repeating idle timer that is effectively buffer-local.
 ;;
 
 ;; Global idle timer (repeating), keep active while the buffer-local mode is enabled.
@@ -1027,7 +1027,7 @@ when checking the entire buffer for example."
 (defvar-local spell-fu--dirty nil)
 
 (defun spell-fu--time-callback-or-disable ()
-  "Callback that run the repeat timer."
+  "Callback that runs the repeat timer."
   (declare (important-return-value nil))
 
   ;; Ensure all other buffers are highlighted on request.
@@ -1094,7 +1094,7 @@ when checking the entire buffer for example."
     (spell-fu--time-ensure nil))))
 
 (defun spell-fu--time-buffer-local-enable ()
-  "Ensure buffer local state is enabled."
+  "Ensure buffer-local state is enabled."
   (declare (important-return-value nil))
   ;; Needed in case focus changes before the idle timer runs.
   (setq spell-fu--dirty-flush-all t)
@@ -1103,7 +1103,7 @@ when checking the entire buffer for example."
   (add-hook 'window-state-change-hook #'spell-fu--time-reset nil t))
 
 (defun spell-fu--time-buffer-local-disable ()
-  "Ensure buffer local state is disabled."
+  "Ensure buffer-local state is disabled."
   (declare (important-return-value nil))
   (kill-local-variable 'spell-fu--dirty)
   (spell-fu--time-ensure nil)
@@ -1307,7 +1307,7 @@ WORD defaults to the word at point if not provided."
     (spell-fu--refresh)))
 
 (defun spell-fu-reset ()
-  "Reset spell-fu and it's cache, useful if the cache has somehow become invalid."
+  "Reset spell-fu and its cache, useful if the cache has somehow become invalid."
   (declare (important-return-value nil))
   (interactive)
   (let ((buffers-in-mode nil))
@@ -1333,7 +1333,7 @@ WORD defaults to the word at point if not provided."
               (buffers-in-mode
                "")
               (t
-               " no buffers in spell-fu found, generate cache on next use!")))))
+               "; no spell-fu buffers found, generate cache on next use!")))))
 
 ;; ---------------------------------------------------------------------------
 ;; Ispell / Aspell dictionary support
@@ -1355,7 +1355,7 @@ Return t if the file was updated."
                dict-file
                (spell-fu--file-is-older
                 words-file
-                ;; Chase links is needed as checking the symbolic-link date isn't correct, #31.
+                ;; Chasing links is needed as checking the symbolic-link date isn't correct, #31.
                 (file-chase-links dict-file))))
          ;; Return value, failure to run `aspell' leaves this nil.
          (updated nil))
@@ -1421,8 +1421,8 @@ Return t if the file was updated."
 
                 (setq word-list (spell-fu--buffer-as-line-list (current-buffer) word-list)))))
 
-          ;; Case insensitive sort is important if this is used for `ispell-complete-word-dict'.
-          ;; Which is a handy double-use for this file.
+          ;; Case insensitive sort is important if this is used for `ispell-complete-word-dict',
+          ;; which is a handy double-use for this file.
           (when updated
             (let ((word-list-ncase nil))
               (dolist (word word-list)
@@ -1542,7 +1542,7 @@ Return t if the file was updated."
          (is-dict-outdated
           (and has-words-file
                has-dict-personal
-               ;; Chase links is needed as checking the symbolic-link date isn't correct, #31.
+               ;; Chasing links is needed as checking the symbolic-link date isn't correct, #31.
                (spell-fu--file-is-older words-file (file-chase-links personal-words-file)))))
 
     (when (or (null has-words-file) is-dict-outdated)
@@ -1566,8 +1566,8 @@ Return t if the file was updated."
 
             (setq word-list (spell-fu--buffer-as-line-list (current-buffer) word-list)))
 
-          ;; Case insensitive sort is important if this is used for `ispell-complete-word-dict'.
-          ;; Which is a handy double-use for this file.
+          ;; Case insensitive sort is important if this is used for `ispell-complete-word-dict',
+          ;; which is a handy double-use for this file.
           (let ((word-list-ncase nil))
             (dolist (word word-list)
               (push (cons (downcase word) word) word-list-ncase))
@@ -1620,7 +1620,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
         (insert-file-contents-literally dict-file)
 
         ;; Ensure newline at EOF,
-        ;; not essential but complicates sorted add if we don't do this.
+        ;; not essential but complicates sorted adding if we don't do this.
         ;; also ensures we can step past the header which _could_ be a single line
         ;; without anything below it.
         (goto-char (point-max))
@@ -1756,7 +1756,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
     (setq spell-fu--buffer-localwords-cache-table word-table)))
 
 (defun spell-fu--buffer-localwords-add-or-remove (word action)
-  "Add or remove WORD from buffer local names depending on ACTION."
+  "Add or remove WORD from buffer-local words depending on ACTION."
   (declare (important-return-value t))
   (catch 'result
     (spell-fu--with-message-prefix "Spell-fu: "
@@ -1781,7 +1781,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
 
            ((eq action 'remove)
             (unless word-in-dict
-              (message "\"%s\" not in the personal dictionary." word)
+              (message "\"%s\" not in the local dictionary." word)
               (throw 'result nil))
 
             (setq spell-fu-buffer-session-localwords
@@ -1806,7 +1806,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
     ;; Start with no words - construct them lazily
     (set dict nil)
     ;; Set description
-    (put dict 'description "Buffer local dictionary")
+    (put dict 'description "Buffer-local dictionary")
     ;; Set update function
     (put dict 'update #'spell-fu--buffer-localwords-cache-table-update)
     ;; Set add/remove functions

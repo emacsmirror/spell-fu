@@ -1559,7 +1559,7 @@ Return t if the file was updated."
               (when (looking-at-p "personal_ws-")
                 (delete-region (pos-bol) (1+ (pos-eol))))
               (goto-char (point-max))
-              (unless (eq ?\n (char-after))
+              (unless (eq ?\n (char-before))
                 (insert "\n")))
 
             (setq word-list (spell-fu--buffer-as-line-list (current-buffer) word-list)))

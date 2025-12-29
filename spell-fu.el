@@ -589,9 +589,8 @@ save some time by not spending time reading it back."
         (spell-fu--cache-from-word-list-impl words-file cache-file)
       (error
        ;; Should be rare: if the file is corrupt or cannot be read for any reason.
-       (progn
-         (message "failed, %s" (error-message-string err))
-         nil)))))
+       (message "failed, %s" (error-message-string err))
+       nil))))
 
 (defun spell-fu--cache-words-load-impl (cache-file)
   "Return the Lisp content from reading CACHE-FILE.
@@ -626,9 +625,8 @@ the caller will need to regenerate the cache."
         (spell-fu--cache-words-load-impl cache-file)
       (error
        ;; Should be rare: if the file is corrupt or cannot be read for any reason.
-       (progn
-         (message "failed, %s" (error-message-string err))
-         nil)))))
+       (message "failed, %s" (error-message-string err))
+       nil))))
 
 
 ;; ---------------------------------------------------------------------------

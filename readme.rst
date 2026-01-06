@@ -4,7 +4,7 @@ Spell Fu
 
 Fast highlighting of misspelled words.
 
-This is a light weight spell checker for Emacs,
+This is a lightweight spell checker for Emacs,
 that runs from the syntax highlighter without starting external processes.
 
 Available on `Melpa <https://melpa.org/#/spell-fu>`__.
@@ -17,11 +17,11 @@ There are two main areas this package focuses on.
 
 - Fast on-screen highlighting.
 
-  *Currently most alternative solutions run an external processes and don't always update on-screen results.*
+  *Currently most alternative solutions run external processes and don't always update on-screen results.*
 
 - Hack-able spell-checking.
 
-  *Easily to customize for users, for different major-modes.*
+  *Easy to customize for users, for different major-modes.*
 
 
 Usage
@@ -85,7 +85,7 @@ Global Settings
 ^^^^^^^^^^^^^^^
 
 ``spell-fu-directory``
-   The directory used for storing the dictionary cached.
+   The directory used for storing the dictionary cache.
 
 ``spell-fu-idle-delay`` (0.25 seconds)
    The idle time before marking words as misspelled.
@@ -176,7 +176,7 @@ they aren't necessary for typical usage.
 
 ``spell-fu-check-range``
    This is the main function which checks words,
-   in most cases this can be left at it's default.
+   in most cases this can be left at its default.
 
    In some cases you may wish to scan the text in the given range using more sophisticated checks,
    skipping text based on your own rules.
@@ -239,7 +239,7 @@ there are some commands provided which may come in handy.
    Toggle ``spell-fu`` mode for all buffers and resets cache,
    use this if you suspect errors relating to invalid cache.
 
-   This can be useful if you use the ``default`` dictionary, then change the systems locale.
+   This can be useful if you use the ``default`` dictionary, then change the system's locale.
 
 
 Multiple dictionaries
@@ -279,7 +279,7 @@ Other Packages
    and running this on an entire buffer can be slow.
 
 `WCheck Mode <https://github.com/tlikonen/wcheck-mode>`__
-   This is a close match to Spell-fu, the main differences is that it's calling a sub-process
+   This is a close match to Spell-fu, the main difference is that it's calling a sub-process
    on each word which gives slower results.
    I also found its configuration rather difficult to manage.
 

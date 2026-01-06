@@ -77,7 +77,7 @@
 
 (defcustom spell-fu-directory (locate-user-emacs-file "spell-fu" ".emacs-spell-fu")
   "The directory to store dictionary data."
-  :type 'string)
+  :type 'directory)
 
 (defcustom spell-fu-idle-delay 0.25
   "Idle time to wait before highlighting.

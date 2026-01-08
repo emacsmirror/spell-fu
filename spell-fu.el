@@ -221,10 +221,8 @@ Notes:
 
 (defmacro spell-fu--debug-message (fmt &rest args)
   "Debug message logging passing FMT and ARGS to `message'."
-  ;; When emacs 28.2 support is dropped,
-  ;; this can simply check `spell-fu-debug', see: #36.
-  (when (bound-and-true-p spell-fu-debug)
-    `(apply #'message (list (concat "spell-fu-debug: " ,fmt) ,@args))))
+  `(when spell-fu-debug
+     (message (concat "spell-fu-debug: " ,fmt) ,@args)))
 
 ;; ---------------------------------------------------------------------------
 ;; Dictionary Utility Functions

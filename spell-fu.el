@@ -45,7 +45,7 @@
 
 ;; For `face-list-p'.
 (require 'faces)
-;; For variables we read `ispell-personal-dictionary' local dictionary, etc.
+;; For variables such as `ispell-personal-dictionary', local dictionary, etc.
 (require 'ispell)
 ;; For `string-blank-p'.
 (require 'subr-x)
@@ -101,9 +101,9 @@ otherwise be marked as incorrect."
   :type 'boolean)
 
 (defvar-local spell-fu-buffer-session-localwords nil
-  "Optional buffer-local word-list of words.
+  "Optional buffer-local word list.
 This is intended to be set by file-locals or dir-locals.
-Call `spell-fu-buffer-session-localwords-refresh' after run-time modifications.")
+Call `spell-fu-buffer-session-localwords-update' after run-time modifications.")
 
 ;;;###autoload
 (put 'spell-fu-buffer-session-localwords 'safe-local-variable #'spell-fu-list-of-strings-p)
@@ -180,7 +180,7 @@ over which words are being checked.
 Notes:
 
 - The ranges passed in are guaranteed to be on line boundaries.
-- Calling `spell-fu-check-word' on each word.
+- Call `spell-fu-check-word' on each word.
 
 - You may explicitly mark a range as incorrect using
   `spell-fu-mark-incorrect' which takes the range to mark as arguments.")
@@ -200,7 +200,7 @@ Notes:
 ;; Cache the result of: `(mapcar #'symbol-value spell-fu-dictionaries)'
 (defvar-local spell-fu--cache-table-list nil)
 
-;; The buffer-local dictionary generated from `spell-fu-buffer-session-localwords'.
+;; The buffer local dictionary generated from `spell-fu-buffer-session-localwords'.
 (defvar-local spell-fu--buffer-localwords-cache-table nil)
 
 ;; Map `spell-fu-buffer-session-localwords' identity to existing
@@ -228,7 +228,7 @@ Notes:
 ;; Dictionary Utility Functions
 
 (defsubst spell-fu--canonicalize-word-downcase (word)
-  "Return lowercase UTF-8 encoded WORD (must already be lowercase)."
+  "Return UTF-8 encoded WORD (must already be lowercase)."
   (encode-coding-string word 'utf-8))
 
 (defsubst spell-fu--canonicalize-word (word)
@@ -341,7 +341,7 @@ Notes:
 (defun spell-fu--get-edit-candidate-dictionaries (word action)
   "Return dictionaries for which it makes sense to perform ACTION on WORD.
 
-ACTION is `'remove' or `'add'.  Returned candidates are dictionaries
+ACTION is `remove' or `add'.  Returned candidates are dictionaries
 which support the operation, and correspondingly do / do not
 already contain WORD."
   (declare (important-return-value t))
@@ -368,7 +368,7 @@ already contain WORD."
 
 (defun spell-fu--read-dictionary (candidate-dicts prompt)
   "Ask the user to select one dictionary from CANDIDATE-DICTS.
-PROMPT is shown to the users completing read."
+PROMPT is shown to the user in completing-read."
   (declare (important-return-value t))
   (cond
    ((<= (length candidate-dicts) 1)
@@ -389,7 +389,7 @@ PROMPT is shown to the users completing read."
 (defmacro spell-fu--with-advice (advice &rest body)
   "Execute BODY with ADVICE temporarily enabled.
 
-Advice are triplets of (SYMBOL HOW FUNCTION),
+Each advice is a triplet of (SYMBOL HOW FUNCTION),
 see `advice-add' documentation."
   (declare (indent 1))
   (let ((advice-list advice)
@@ -471,7 +471,7 @@ Optional argument BODY runs with the depth override."
 
 (defun spell-fu--removed-changed-overlay (overlay after _beg _end &optional _len)
   "Hook for removing OVERLAY which is being edited.
-Argument AFTER, ignore when true."
+Argument AFTER when non-nil, the overlay is not deleted."
   (declare (important-return-value nil))
   (unless after
     (delete-overlay overlay)))
@@ -500,15 +500,15 @@ Argument AFTER, ignore when true."
     nil)))
 
 (defun spell-fu--faces-at-point (pos)
-  "Add the named faces that the `read-face-name' or `face' property use.
-Argument POS return faces at this point."
+  "Return the named faces that the `read-face-name' or `face' property use.
+Argument POS is the position to check."
   (declare (important-return-value t))
   ;; NOTE: use `get-text-property' instead of `get-char-property' so overlays are excluded,
   ;; since this causes overlays with `hl-line-mode' (for example) to mask other faces.
   ;; If we want to include faces of overlays, this could be supported.
   (let ((faceprop (or (get-text-property pos 'read-face-name) (get-text-property pos 'face))))
     (when faceprop
-      ; List of faces to return.
+      ;; List of faces to return.
       (spell-fu--faces-as-normalized-list faceprop))))
 
 (defun spell-fu--next-faces-prop-change (pos limit)
@@ -549,14 +549,14 @@ Argument POS return faces at this point."
 
 The resulting cache is returned as a minor optimization for first-time loading,
 where we need to create this data in order to write it,
-save some time by not spending time reading it back."
+saving some time by not reading it back."
   (declare (important-return-value t))
   (message "%S" (file-name-nondirectory cache-file))
   (let ((cache-header
          ;; The header, an associative list of items.
          (list (cons "version" spell-fu--cache-version)))
         (word-table nil)
-        ;; Needed for Windows to prevent CRLF including new-lines in strings.
+        ;; Needed on Windows to prevent CRLF line endings in strings.
         (coding-system-for-read 'utf-8-unix)
         (coding-system-for-write 'utf-8-unix))
 
@@ -679,7 +679,7 @@ Uses WORD, WORD-LOCASE & WORD-UPCASE to calculate delimiting."
    ;; The option to delimit by camel-case isn't enabled, early exit.
    ((null spell-fu-word-delimit-camel-case)
     nil)
-   ;; Early exit common case Where only the first letter is capitalized.
+   ;; Early exit common case where only the first letter is capitalized.
    ((string-equal (substring word 1) (substring word-locase 1))
     nil)
    (t
@@ -784,7 +784,7 @@ Argument POS-END the end position of WORD."
 ;; ---------------------------------------------------------------------------
 ;; Range Checking Commands
 ;;
-;; These functions are valid values for the `spell-fu-check-range' buffer-local variable.
+;; These functions are valid values for the `spell-fu-check-range' buffer local variable.
 ;;
 ;; Note that the callers of these functions extend the range to line delimiters,
 ;; to ensure there is no chance of the points being in the middle of a word.
@@ -820,8 +820,7 @@ This only checks the text matching face rules."
             ;; In practice this is likely caused by escape characters, e.g.
             ;; "test\nthe text" where "\n" may have separate highlighting.
             (while (< pos-beg pos-end)
-              (let* ((point-end-iter ; Set to `ok-beg' next iteration to avoid duplicate checks.
-                      (spell-fu--next-faces-prop-change pos-beg pos-end))
+              (let* ((point-end-iter (spell-fu--next-faces-prop-change pos-beg pos-end))
                      (ok-end-iter
                       (and (< point-end-iter pos-end)
                            (spell-fu--check-faces-at-point point-end-iter))))
@@ -873,7 +872,7 @@ This only checks the text matching face rules."
             (spell-fu-check-word word-beg word-end (match-string-no-properties 0))))))))
 
 (defun spell-fu-check-range-default (pos-beg pos-end)
-  "Check spelling POS-BEG & POS-END, checking comments and strings."
+  "Check spelling for POS-BEG & POS-END, checking comments and strings."
   (declare (important-return-value nil))
   (cond
    ((or spell-fu-faces-include spell-fu-faces-exclude)
@@ -886,7 +885,7 @@ This only checks the text matching face rules."
 ;; Immediate Style (spell-fu-idle-delay zero or lower)
 
 (defun spell-fu--font-lock-fontify-region (pos-beg pos-end)
-  "Update spelling for POS-BEG & POS-END to the queue, checking all text."
+  "Update spelling for POS-BEG & POS-END, checking all text."
   (declare (important-return-value nil))
   (spell-fu--setq-expand-range-to-line-boundaries
    ;; Warning these values are set in place.
@@ -898,7 +897,7 @@ This only checks the text matching face rules."
   (declare (important-return-value nil))
 
   ;; It's important this is added with a depth of 100,
-  ;; because we want the font faces (comments, string etc) to be set so
+  ;; because we want the font faces (comments, strings, etc.) to be set so
   ;; the spell checker can read these values which may include/exclude words.
   (spell-fu--with-add-hook-depth-override 100
     (jit-lock-register #'spell-fu--font-lock-fontify-region)))
@@ -1006,22 +1005,22 @@ when checking the entire buffer for example."
 ;; This works as follows:
 ;;
 ;; - The timer is kept active as long as the local mode is enabled.
-;; - Entering a buffer runs the buffer-local `window-state-change-hook'
-;;   immediately which checks if the mode is enabled,
-;;   set up the global timer if it is.
+;; - Entering a buffer runs the buffer local `window-state-change-hook'
+;;   immediately, which checks if the mode is enabled,
+;;   setting up the global timer if it is.
 ;; - Switching to any other buffer won't run this hook;
 ;;   we rely on the idle timer itself running, which detects the active mode,
 ;;   canceling itself if the mode isn't active.
 ;;
 ;; This is a reliable way of using a global,
-;; repeating idle timer that is effectively buffer-local.
+;; repeating idle timer that is effectively buffer local.
 ;;
 
 ;; Global idle timer (repeating), keep active while the buffer-local mode is enabled.
 (defvar spell-fu--global-timer nil)
 ;; When t, the timer will update buffers in all other visible windows.
 (defvar spell-fu--dirty-flush-all nil)
-;; When true, the buffer should be updated when inactive.
+;; When non-nil, the buffer should be updated when inactive.
 (defvar-local spell-fu--dirty nil)
 
 (defun spell-fu--time-callback-or-disable ()
@@ -1080,7 +1079,7 @@ when checking the entire buffer for example."
       (setq spell-fu--global-timer nil)))))
 
 (defun spell-fu--time-reset ()
-  "Run this when the buffer was changed."
+  "Run when the buffer changes."
   (declare (important-return-value nil))
   ;; Ensure changing windows doesn't leave other buffers with stale highlight.
   (cond
@@ -1430,7 +1429,7 @@ Return t if the file was updated."
               (setq word-list-ncase
                     (sort word-list-ncase (lambda (a b) (string-lessp (car a) (car b)))))
 
-              ;; Needed for Windows to prevent CRLF including new-lines in strings.
+              ;; Needed on Windows to prevent CRLF line endings in strings.
               (let ((coding-system-for-write 'utf-8-unix))
                 ;; Write to 'words-file'.
                 (with-temp-buffer
@@ -1443,7 +1442,7 @@ Return t if the file was updated."
 ;; Word List Initialization
 
 (defun spell-fu--aspell-update (dict dict-name)
-  "Set up the Aspell DICT, named DICT-NAME initializing it as necessary."
+  "Set up the Aspell DICT, named DICT-NAME, initializing it as necessary."
   (declare (important-return-value t))
   ;; Get the paths of temporary files,
   ;; ensure the cache file is newer, otherwise regenerate it.
@@ -1529,7 +1528,7 @@ associated with the dictionary."
 ;;
 
 (defun spell-fu--personal-word-list-ensure (words-file personal-words-file)
-  "Ensure the word list is generated for the personal dictionary DICT-NAME.
+  "Ensure the word list is generated for the personal dictionary.
 Argument WORDS-FILE is the destination file to write the word list into.
 Argument PERSONAL-WORDS-FILE is the source file to read words from.
 
@@ -1624,8 +1623,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
         (goto-char (point-max))
         (unless (string-blank-p (buffer-substring-no-properties (pos-bol) (pos-eol)))
           (insert "\n"))
-        ;; Delete extra blank lines.
-        ;; So we can use line count as word count.
+        ;; Delete extra blank lines so we can use line count as word count.
         (while (and (zerop (forward-line -1))
                     (string-blank-p (buffer-substring-no-properties (pos-bol) (pos-eol))))
           (delete-region
@@ -1661,7 +1659,6 @@ Argument DICT-FILE is the absolute path to the dictionary."
             (when word-point
               (message "\"%s\" already in the personal dictionary." word)
               (throw 'result nil))
-
 
             (let ((keep-searching t))
               (while (and keep-searching
@@ -1797,8 +1794,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
             t))))))
 
 (defun spell-fu-get-buffer-session-localwords-dictionary ()
-  "Get the personal dictionary NAME.
-Argument DICT-FILE is the absolute path to the dictionary."
+  "Get the buffer-local session words dictionary."
   (declare (important-return-value t))
   (let ((dict 'spell-fu--buffer-localwords-cache-table))
     ;; Start with no words - construct them lazily
@@ -1925,7 +1921,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
          (not spell-fu-mode)
          ;; Not in the mini-buffer.
          (null (minibufferp))
-         ;; Not a special mode (package list, tabulated data ... etc)
+         ;; Not a special mode (package list, tabulated data, etc.)
          ;; Instead the buffer is likely derived from `text-mode' or `prog-mode'.
          (null (derived-mode-p 'special-mode))
          ;; Not explicitly ignored.

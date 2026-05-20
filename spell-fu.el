@@ -344,6 +344,8 @@ Notes:
 ACTION is `remove' or `add'.  Returned candidates are dictionaries
 which support the operation, and correspondingly do / do not
 already contain WORD."
+  ;; NOTE: Non-persistent dictionaries (e.g. buffer-local session words)
+  ;; are excluded since edits to them would not survive the buffer being killed.
   (declare (important-return-value t))
   (let ((adding (eq action 'add))
         (encoded-word (spell-fu--canonicalize-word word)))
@@ -360,6 +362,8 @@ already contain WORD."
             'add-word)
            (t
             'remove-word)))
+         ;; Skip dictionaries not backed by persistent storage.
+         (null (spell-fu--buffer-localwords-dictionary-test dict))
          ;; Word is / is not in dictionary?
          (eq adding (null (gethash encoded-word (symbol-value dict))))
          ;; Result.

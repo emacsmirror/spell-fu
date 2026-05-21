@@ -629,6 +629,23 @@ the caller will need to regenerate the cache."
        (message "failed, %s" (error-message-string err))
        nil))))
 
+(defun spell-fu--cache-ensure (dict words-file cache-file)
+  "Return a hash table for DICT populated from CACHE-FILE or WORDS-FILE.
+CACHE-FILE is read when newer than WORDS-FILE, otherwise the words are
+loaded from WORDS-FILE and CACHE-FILE is refreshed as a side effect.
+Returns an empty hash table after warning when both sources fail."
+  (declare (important-return-value t))
+  (or (and (file-exists-p cache-file)
+           (null (spell-fu--file-is-older cache-file words-file))
+           (spell-fu--cache-words-load cache-file))
+      (spell-fu--cache-from-word-list words-file cache-file)
+      (spell-fu--with-message-prefix "Spell-fu: "
+        (message "failed to populate %s, spell-checking will skip it"
+                 (or (get dict 'description) dict))
+        ;; Dummy table so `gethash' callers on `spell-fu--cache-table-list'
+        ;; do not have to nil-check every lookup.
+        (make-hash-table :test #'equal :size 0))))
+
 
 ;; ---------------------------------------------------------------------------
 ;; Explode Words (Calculate Extra Delimiters)
@@ -1463,12 +1480,7 @@ Return t if the file was updated."
     (when (or (spell-fu--aspell-word-list-ensure words-file dict-name) forced)
       ;; Load cache or create it, creating it returns the cache
       ;; to avoid some slow-down on first load.
-      (set
-       dict
-       (or (and (file-exists-p cache-file)
-                (null (spell-fu--file-is-older cache-file words-file))
-                (spell-fu--cache-words-load cache-file))
-           (spell-fu--cache-from-word-list words-file cache-file))))))
+      (set dict (spell-fu--cache-ensure dict words-file cache-file)))))
 
 
 (defun spell-fu--aspell-find-data-file (dict-aspell-name)
@@ -1603,12 +1615,7 @@ Argument DICT-FILE is the absolute path to the dictionary."
     (when (or (spell-fu--personal-word-list-ensure words-file dict-file) forced)
       ;; Load cache or create it, creating it returns the cache
       ;; to avoid some slow-down on first load.
-      (set
-       dict
-       (or (and (file-exists-p cache-file)
-                (null (spell-fu--file-is-older cache-file words-file))
-                (spell-fu--cache-words-load cache-file))
-           (spell-fu--cache-from-word-list words-file cache-file))))))
+      (set dict (spell-fu--cache-ensure dict words-file cache-file)))))
 
 (defun spell-fu--personal-word-add-or-remove (word dict dict-file action)
   "Apply ACTION to WORD for the personal dictionary DICT-FILE for dictionary DICT."

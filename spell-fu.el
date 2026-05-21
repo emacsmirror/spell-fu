@@ -1384,6 +1384,12 @@ WORD defaults to the word at point if not provided."
     (when (file-directory-p spell-fu-directory)
       (delete-directory spell-fu-directory t nil))
 
+    ;; Purge cached hash tables on every registered dictionary so the next
+    ;; update reloads from disk.  Cons identity is preserved, so existing
+    ;; references in any buffer's `spell-fu-dictionaries' remain valid.
+    (maphash
+     (lambda (_key dict) (spell-fu--dict-set-words dict nil)) spell-fu--dictionary-registry)
+
     (with-demoted-errors "spell-fu-reset: %S"
       (dolist (buf buffers-in-mode)
         (with-current-buffer buf

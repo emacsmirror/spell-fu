@@ -784,6 +784,11 @@ Argument POS-END the end position of WORD."
                         (throw 'result (substring word beg end))))))))))
         (throw 'result nil)))))
 
+(defun spell-fu--word-at-point-or-error ()
+  "Return the word at the current point, signal a user-error otherwise."
+  (declare (important-return-value t))
+  (or (spell-fu--word-at-point) (user-error "Spell-fu: no word at point")))
+
 
 ;; ---------------------------------------------------------------------------
 ;; Range Checking Commands
@@ -1248,13 +1253,13 @@ Return t when found, otherwise nil."
 Return t when the word has been added.
 WORD defaults to the word at point if not provided."
   (declare (important-return-value nil))
-  (interactive (let ((w (spell-fu--word-at-point)))
+  (interactive (let ((w (spell-fu--word-at-point-or-error)))
                  (list
                   (spell-fu--read-dictionary
                    (spell-fu--get-edit-candidate-dictionaries w 'add) "Add to dictionary: ")
                   w)))
   (unless word
-    (setq word (spell-fu--word-at-point)))
+    (setq word (spell-fu--word-at-point-or-error)))
   (cond
    (dict
     (let ((encoded-word (spell-fu--canonicalize-word word)))
@@ -1271,7 +1276,7 @@ WORD defaults to the word at point if not provided."
 Return t when the word has been removed.
 WORD defaults to the word at point if not provided."
   (declare (important-return-value nil))
-  (interactive (let ((w (spell-fu--word-at-point)))
+  (interactive (let ((w (spell-fu--word-at-point-or-error)))
                  (list
                   (spell-fu--read-dictionary
                    (spell-fu--get-edit-candidate-dictionaries
@@ -1279,7 +1284,7 @@ WORD defaults to the word at point if not provided."
                    "Remove from dictionary: ")
                   w)))
   (unless word
-    (setq word (spell-fu--word-at-point)))
+    (setq word (spell-fu--word-at-point-or-error)))
   (cond
    (dict
     (let ((encoded-word (spell-fu--canonicalize-word word)))

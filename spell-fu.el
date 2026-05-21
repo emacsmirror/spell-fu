@@ -641,7 +641,7 @@ Returns an empty hash table after warning when both sources fail."
       (spell-fu--cache-from-word-list words-file cache-file)
       (spell-fu--with-message-prefix "Spell-fu: "
         (message "failed to populate %s, spell-checking will skip it"
-                 (or (get dict 'description) dict))
+                 (or (get dict 'description) "<unknown dictionary>"))
         ;; Dummy table so `gethash' callers on `spell-fu--cache-table-list'
         ;; do not have to nil-check every lookup.
         (make-hash-table :test #'equal :size 0))))

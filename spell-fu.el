@@ -1861,8 +1861,12 @@ Return non-nil when a new hash table was installed."
               (message "\"%s\" not in the local dictionary." word)
               (throw 'result nil))
 
+            ;; Non-destructive: produces a new list head so the eq-keyed
+            ;; entry in `spell-fu--buffer-localwords-global-cache-table-map'
+            ;; misses and `spell-fu--buffer-localwords-update' rebuilds the
+            ;; hash table from the smaller list.
             (setq spell-fu-buffer-session-localwords
-                  (delete encoded-word spell-fu-buffer-session-localwords))
+                  (remove encoded-word spell-fu-buffer-session-localwords))
             (when (spell-fu--buffer-localwords-update dict)
               (spell-fu--refresh-cache-table-list))
 

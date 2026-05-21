@@ -1736,16 +1736,19 @@ Argument DICT-FILE is the absolute path to the dictionary."
 ;; Buffer Local Words
 
 (defun spell-fu--buffer-localwords-cache-table-update ()
-  "Set `spell-fu--buffer-localwords-cache-table' from the local word list."
+  "Set `spell-fu--buffer-localwords-cache-table' from the local word list.
+Return non-nil when a new hash table was created, so callers can drop
+any cached references to the previous one."
   (declare (important-return-value nil))
-  (let ((word-table
-         ;; Reuse the previous table if possible.
-         (and spell-fu--buffer-localwords-global-cache-table-map
-              (gethash spell-fu-buffer-session-localwords
-                       spell-fu--buffer-localwords-global-cache-table-map
-                       nil))))
+  (let* ((word-table
+          ;; Reuse the previous table if possible.
+          (and spell-fu--buffer-localwords-global-cache-table-map
+               (gethash spell-fu-buffer-session-localwords
+                        spell-fu--buffer-localwords-global-cache-table-map
+                        nil)))
+         (word-table-created (null word-table)))
 
-    (unless word-table
+    (when word-table-created
       (setq word-table
             (make-hash-table :test #'equal :size (length spell-fu-buffer-session-localwords)))
       (dolist (word spell-fu-buffer-session-localwords)
@@ -1757,7 +1760,8 @@ Argument DICT-FILE is the absolute path to the dictionary."
        spell-fu-buffer-session-localwords
        word-table
        spell-fu--buffer-localwords-global-cache-table-map))
-    (setq spell-fu--buffer-localwords-cache-table word-table)))
+    (setq spell-fu--buffer-localwords-cache-table word-table)
+    word-table-created))
 
 (defun spell-fu--buffer-localwords-add-or-remove (word action)
   "Add or remove WORD from buffer-local words depending on ACTION."
@@ -1778,7 +1782,8 @@ Argument DICT-FILE is the absolute path to the dictionary."
               (throw 'result nil))
 
             (push encoded-word spell-fu-buffer-session-localwords)
-            (spell-fu--buffer-localwords-cache-table-update)
+            (when (spell-fu--buffer-localwords-cache-table-update)
+              (spell-fu--refresh-cache-table-list))
 
             (message "\"%s\" successfully added!" word)
             (setq changed t))
@@ -1790,7 +1795,8 @@ Argument DICT-FILE is the absolute path to the dictionary."
 
             (setq spell-fu-buffer-session-localwords
                   (delete encoded-word spell-fu-buffer-session-localwords))
-            (spell-fu--buffer-localwords-cache-table-update)
+            (when (spell-fu--buffer-localwords-cache-table-update)
+              (spell-fu--refresh-cache-table-list))
 
             (message "\"%s\" successfully removed!" word)
             (setq changed t))
@@ -1842,7 +1848,8 @@ Argument DICT-FILE is the absolute path to the dictionary."
         (setq do-refresh-cache-table-list t))))
     (cond
      (spell-fu-buffer-session-localwords
-      (spell-fu--buffer-localwords-cache-table-update))
+      (when (spell-fu--buffer-localwords-cache-table-update)
+        (setq do-refresh-cache-table-list t)))
      (t
       (kill-local-variable 'spell-fu--buffer-localwords-cache-table)))
     (when do-refresh-cache-table-list

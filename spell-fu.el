@@ -372,7 +372,7 @@ already contain WORD."
 
 (defun spell-fu--read-dictionary (candidate-dicts prompt)
   "Ask the user to select one dictionary from CANDIDATE-DICTS.
-PROMPT is shown to the user in completing-read."
+PROMPT is shown to the user in `completing-read'."
   (declare (important-return-value t))
   (cond
    ((<= (length candidate-dicts) 1)

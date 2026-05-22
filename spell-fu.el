@@ -210,33 +210,28 @@ Notes:
 ;; ---------------------------------------------------------------------------
 ;; Dictionary Representation
 ;;
-;; A dictionary is a cons cell: (HASH-TABLE . ALIST)
+;; A dictionary is an alist with the following keys:
 ;;
-;;   car: the hash table of canonicalized words (read on every spell check).
-;;   cdr: an alist of metadata.
-;;
-;; Alist keys:
+;;   `hash'        - the hash table of canonicalized words, or nil if not yet
+;;                   loaded.  Read on every spell check.
 ;;   `name'        - string, used for cache/words file paths.
 ;;   `description' - short human-readable description.
 ;;   `update'      - function (DICT) -> nil, refresh the words hash table.
 ;;   `add-word'    - function (DICT WORD) -> bool, persist a new word.
 ;;     Optional; absent for read-only dictionaries.
 ;;   `remove-word' - function (DICT WORD) -> bool, persist a removal.  Optional.
-;;
-;; The alist values are bare function symbols, not closures, so localwords
-;; dictionaries can share a single template alist across all buffers.
 
 (defsubst spell-fu--dict-words (dict)
   "Return the words hash table of DICT."
-  (car dict))
+  (cdr (assq 'hash dict)))
 
 (defsubst spell-fu--dict-set-words (dict words)
   "Set the words hash table of DICT to WORDS."
-  (setcar dict words))
+  (setcdr (assq 'hash dict) words))
 
 (defsubst spell-fu--dict-get (dict prop)
   "Return the metadata PROP of DICT, or nil."
-  (cdr (assq prop (cdr dict))))
+  (cdr (assq prop dict)))
 
 
 ;; ---------------------------------------------------------------------------
@@ -1583,13 +1578,12 @@ associated with the dictionary."
     (or (gethash key spell-fu--dictionary-registry)
         (puthash
          key
-         (cons
-          nil
-          (list
-           (cons 'name (concat "spell-fu-ispell-words-" name))
-           (cons 'aspell-name name)
-           (cons 'description (concat "Ispell " name " dictionary"))
-           (cons 'update #'spell-fu--aspell-update)))
+         (list
+          (cons 'hash nil)
+          (cons 'name (concat "spell-fu-ispell-words-" name))
+          (cons 'aspell-name name)
+          (cons 'description (concat "Ispell " name " dictionary"))
+          (cons 'update #'spell-fu--aspell-update))
          spell-fu--dictionary-registry))))
 
 ;; ---------------------------------------------------------------------------
@@ -1786,15 +1780,14 @@ Argument DICT-FILE is the absolute path to the dictionary."
     (or (gethash key spell-fu--dictionary-registry)
         (puthash
          key
-         (cons
-          nil
-          (list
-           (cons 'name (concat "spell-fu-ispell-personal-" name))
-           (cons 'file dict-file)
-           (cons 'description (format "Personal dictionary %s, located at %s" name dict-file))
-           (cons 'update #'spell-fu--personal-update)
-           (cons 'add-word #'spell-fu--personal-word-add)
-           (cons 'remove-word #'spell-fu--personal-word-remove)))
+         (list
+          (cons 'hash nil)
+          (cons 'name (concat "spell-fu-ispell-personal-" name))
+          (cons 'file dict-file)
+          (cons 'description (format "Personal dictionary %s, located at %s" name dict-file))
+          (cons 'update #'spell-fu--personal-update)
+          (cons 'add-word #'spell-fu--personal-word-add)
+          (cons 'remove-word #'spell-fu--personal-word-remove))
          spell-fu--dictionary-registry))))
 
 ;; ---------------------------------------------------------------------------
@@ -1886,20 +1879,16 @@ Return non-nil when a new hash table was installed."
             ;; TODO: update file local variables?
             t))))))
 
-;; Shared metadata for every buffer's local-words dictionary.  The car of each
-;; localwords dict (the per-buffer hash table) is the only thing that differs.
-(defconst spell-fu--buffer-localwords-template
+(defun spell-fu-get-buffer-session-localwords-dictionary ()
+  "Get the buffer-local session words dictionary."
+  (declare (important-return-value t))
   (list
+   (cons 'hash nil)
    (cons 'name "spell-fu-buffer-localwords")
    (cons 'description "Buffer-local dictionary")
    (cons 'update #'spell-fu--buffer-localwords-update)
    (cons 'add-word #'spell-fu--buffer-localwords-add)
    (cons 'remove-word #'spell-fu--buffer-localwords-remove)))
-
-(defun spell-fu-get-buffer-session-localwords-dictionary ()
-  "Get the buffer-local session words dictionary."
-  (declare (important-return-value t))
-  (cons nil spell-fu--buffer-localwords-template))
 
 (defun spell-fu--buffer-localwords-dictionary-test (dict)
   "Return non-nil when DICT is a local-words dictionary."

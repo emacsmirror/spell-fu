@@ -210,7 +210,8 @@ Notes:
 ;; ---------------------------------------------------------------------------
 ;; Dictionary Representation
 ;;
-;; A dictionary is an alist with the following keys:
+;; A dictionary is an alist, constructed exclusively by
+;; `spell-fu--dictionary-create', with the following keys:
 ;;
 ;;   `hash'        - the hash table of canonicalized words, or nil if not yet
 ;;                   loaded.  Read on every spell check.
@@ -218,8 +219,11 @@ Notes:
 ;;   `description' - short human-readable description.
 ;;   `update'      - function (DICT) -> nil, refresh the words hash table.
 ;;   `add-word'    - function (DICT WORD) -> bool, persist a new word.
-;;     Optional; absent for read-only dictionaries.
-;;   `remove-word' - function (DICT WORD) -> bool, persist a removal.  Optional.
+;;                   nil for read-only dictionaries.
+;;   `remove-word' - function (DICT WORD) -> bool, persist a removal.
+;;                   nil for read-only dictionaries.
+;;   `aspell-name' - string, the Aspell dictionary name, or nil.
+;;   `file'        - string, path to the backing dictionary file, or nil.
 
 (defsubst spell-fu--dict-words (dict)
   "Return the words hash table of DICT."
@@ -232,6 +236,101 @@ Notes:
 (defsubst spell-fu--dict-get (dict prop)
   "Return the metadata PROP of DICT, or nil."
   (cdr (assq prop dict)))
+
+(defun spell-fu--dictionary-create (&rest keywords)
+  "Construct a dictionary from KEYWORDS, the single dictionary code-path.
+
+KEYWORDS is a property list.  Every keyword listed below must be
+supplied (there are no optional keywords); express \"not applicable\"
+by passing nil for a keyword whose value may be nil.
+
+Unknown, repeated, missing or wrongly-typed keywords signal an error.
+
+:name (string)
+  Base name used to derive the cache & word-list file paths.
+:description (string)
+  Short human-readable description.
+:update (function)
+  Function (DICT) that refreshes the words hash table.
+:add-word (function or nil)
+  Function (DICT WORD) persisting a new word, nil when read-only.
+:remove-word (function or nil)
+  Function (DICT WORD) persisting a removal, nil when read-only.
+:aspell-name (string or nil)
+  The Aspell dictionary name, nil when not Aspell backed.
+:file (string or nil)
+  Absolute path to the backing dictionary file, nil when none."
+  (declare (important-return-value t))
+  (let ((kw-name nil)
+        (kw-description nil)
+        (kw-update nil)
+        (kw-add-word nil)
+        (kw-remove-word nil)
+        (kw-aspell-name nil)
+        (kw-file nil)
+
+        ;; Keywords seen, to enforce that none are omitted (no optional keywords).
+        (seen nil)
+
+        ;; Iteration variables.
+        (keyw nil)
+        (val nil))
+
+    (while (keywordp (setq keyw (car keywords)))
+      (setq keywords (cdr keywords))
+      (setq val (pop keywords))
+      (push keyw seen)
+      ;; Type-check paired with assignment (a nil value is only valid where noted).
+      (pcase keyw
+        (:name
+         (unless (stringp val)
+           (error "Spell-fu: keyword :name expected a string, not %S" (type-of val)))
+         (setq kw-name val))
+        (:description
+         (unless (stringp val)
+           (error "Spell-fu: keyword :description expected a string, not %S" (type-of val)))
+         (setq kw-description val))
+        (:update
+         (unless (functionp val)
+           (error "Spell-fu: keyword :update expected a function, not %S" (type-of val)))
+         (setq kw-update val))
+        (:add-word
+         (unless (or (null val) (functionp val))
+           (error "Spell-fu: keyword :add-word expected a function or nil, not %S" (type-of val)))
+         (setq kw-add-word val))
+        (:remove-word
+         (unless (or (null val) (functionp val))
+           (error "Spell-fu: keyword :remove-word expected a function or nil, not %S"
+                  (type-of val)))
+         (setq kw-remove-word val))
+        (:aspell-name
+         (unless (or (null val) (stringp val))
+           (error "Spell-fu: keyword :aspell-name expected a string or nil, not %S" (type-of val)))
+         (setq kw-aspell-name val))
+        (:file
+         (unless (or (null val) (stringp val))
+           (error "Spell-fu: keyword :file expected a string or nil, not %S" (type-of val)))
+         (setq kw-file val))
+        (_ (error "Spell-fu: unknown keyword %S" keyw))))
+
+    ;; Failure to enter correct keywords is an error.
+    (when keywords
+      (error "Spell-fu: unexpected trailing non-keywords: %S" keywords))
+
+    ;; Ensure all keywords were supplied (no optional keywords).
+    (dolist (keyw '(:name :description :update :add-word :remove-word :aspell-name :file))
+      (unless (memq keyw seen)
+        (error "Spell-fu: missing required keyword %S" keyw)))
+
+    (list
+     (cons 'hash nil)
+     (cons 'name kw-name)
+     (cons 'description kw-description)
+     (cons 'update kw-update)
+     (cons 'add-word kw-add-word)
+     (cons 'remove-word kw-remove-word)
+     (cons 'aspell-name kw-aspell-name)
+     (cons 'file kw-file))))
 
 
 ;; ---------------------------------------------------------------------------
@@ -1578,12 +1677,14 @@ associated with the dictionary."
     (or (gethash key spell-fu--dictionary-registry)
         (puthash
          key
-         (list
-          (cons 'hash nil)
-          (cons 'name (concat "spell-fu-ispell-words-" name))
-          (cons 'aspell-name name)
-          (cons 'description (concat "Ispell " name " dictionary"))
-          (cons 'update #'spell-fu--aspell-update))
+         (spell-fu--dictionary-create
+          :name (concat "spell-fu-ispell-words-" name)
+          :description (concat "Ispell " name " dictionary")
+          :update #'spell-fu--aspell-update
+          :add-word nil
+          :remove-word nil
+          :aspell-name name
+          :file nil)
          spell-fu--dictionary-registry))))
 
 ;; ---------------------------------------------------------------------------
@@ -1780,14 +1881,15 @@ Argument DICT-FILE is the absolute path to the dictionary."
     (or (gethash key spell-fu--dictionary-registry)
         (puthash
          key
-         (list
-          (cons 'hash nil)
-          (cons 'name (concat "spell-fu-ispell-personal-" name))
-          (cons 'file dict-file)
-          (cons 'description (format "Personal dictionary %s, located at %s" name dict-file))
-          (cons 'update #'spell-fu--personal-update)
-          (cons 'add-word #'spell-fu--personal-word-add)
-          (cons 'remove-word #'spell-fu--personal-word-remove))
+         (spell-fu--dictionary-create
+          :name (concat "spell-fu-ispell-personal-" name)
+          :description
+          (format "Personal dictionary %s, located at %s" name dict-file)
+          :update #'spell-fu--personal-update
+          :add-word #'spell-fu--personal-word-add
+          :remove-word #'spell-fu--personal-word-remove
+          :aspell-name nil
+          :file dict-file)
          spell-fu--dictionary-registry))))
 
 ;; ---------------------------------------------------------------------------
@@ -1882,13 +1984,14 @@ Return non-nil when a new hash table was installed."
 (defun spell-fu-get-buffer-session-localwords-dictionary ()
   "Get the buffer-local session words dictionary."
   (declare (important-return-value t))
-  (list
-   (cons 'hash nil)
-   (cons 'name "spell-fu-buffer-localwords")
-   (cons 'description "Buffer-local dictionary")
-   (cons 'update #'spell-fu--buffer-localwords-update)
-   (cons 'add-word #'spell-fu--buffer-localwords-add)
-   (cons 'remove-word #'spell-fu--buffer-localwords-remove)))
+  (spell-fu--dictionary-create
+   :name "spell-fu-buffer-localwords"
+   :description "Buffer-local dictionary"
+   :update #'spell-fu--buffer-localwords-update
+   :add-word #'spell-fu--buffer-localwords-add
+   :remove-word #'spell-fu--buffer-localwords-remove
+   :aspell-name nil
+   :file nil))
 
 (defun spell-fu--buffer-localwords-dictionary-test (dict)
   "Return non-nil when DICT is a local-words dictionary."
